@@ -1,4 +1,3 @@
-````markdown
 # 🎬🎮 Entertainment Tracker
 
 An all-in-one entertainment tracking platform that allows users to discover, organize, and track their movies, TV shows, and video games in a single application.
@@ -247,4 +246,3 @@ This project is licensed under the MIT License.
 ## Vision
 
 Our goal is to build a modern entertainment companion that brings together movies, television, and gaming into a single ecosystem. We want users to spend less time managing multiple tracking apps and more time enjoying the media they love.
-````

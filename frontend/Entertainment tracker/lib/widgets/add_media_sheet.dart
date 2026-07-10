@@ -96,9 +96,9 @@ class _AddMediaSheetState extends State<AddMediaSheet> {
               autofocus: !_isEditing,
               textCapitalization: TextCapitalization.words,
               style: const TextStyle(color: Colors.white),
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Title',
-                prefixIcon: Icon(Icons.movie_filter_outlined),
+                prefixIcon: const Icon(Icons.sports_esports_outlined),
               ),
               onSubmitted: (_) => _submit(),
             ),

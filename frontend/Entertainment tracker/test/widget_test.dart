@@ -23,4 +23,19 @@ void main() {
     expect(find.text('Inception'), findsOneWidget);
     expect(find.text('Film'), findsOneWidget);
   });
+
+  testWidgets('ReelLog can log a game', (WidgetTester tester) async {
+    await tester.pumpWidget(const ReelLogApp());
+
+    await tester.tap(find.text('Log your first title'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField).first, 'Hades');
+    await tester.tap(find.text('Game'));
+    await tester.tap(find.widgetWithText(FilledButton, 'Add to Log'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Hades'), findsOneWidget);
+    expect(find.text('Game'), findsOneWidget);
+  });
 }

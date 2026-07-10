@@ -24,6 +24,8 @@ class _HomeScreenState extends State<HomeScreen> {
         return _entries.where((e) => e.type == MediaType.film).toList();
       case MediaFilter.shows:
         return _entries.where((e) => e.type == MediaType.show).toList();
+      case MediaFilter.games:
+        return _entries.where((e) => e.type == MediaType.game).toList();
       case MediaFilter.watchlist:
         return _entries
             .where((e) => e.status == WatchStatus.watchlist)
@@ -38,6 +40,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   int get _showCount =>
       _entries.where((e) => e.type == MediaType.show).length;
+
+  int get _gameCount =>
+      _entries.where((e) => e.type == MediaType.game).length;
 
   double? get _averageRating {
     final rated = _entries.where((e) => e.rating != null).toList();
@@ -123,22 +128,29 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final filtered = _filteredEntries;
+    final isGameMode = _filter == MediaFilter.games;
+    final primaryAccent = isGameMode ? Colors.green.shade600 : theme.colorScheme.primary;
 
     return Scaffold(
+      backgroundColor: isGameMode ? const Color(0xFFF4EEE5) : Colors.black,
       appBar: AppBar(
+        backgroundColor: isGameMode ? const Color(0xFFF4EEE5) : Colors.black,
+        foregroundColor: isGameMode ? Colors.black : Colors.white,
+        surfaceTintColor: isGameMode ? const Color(0xFFF4EEE5) : Colors.black,
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'ReelLog',
+              isGameMode ? 'Games Tracker' : 'Movies and Shows Tracker',
               style: theme.textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.bold,
+                color: isGameMode ? Colors.black : Colors.white,
               ),
             ),
             Text(
-              'Your films & shows',
+              isGameMode ? 'Your games only' : 'Your films, shows & games',
               style: theme.textTheme.bodySmall?.copyWith(
-                color: Colors.grey.shade500,
+                color: isGameMode ? Colors.black54 : Colors.grey.shade500,
               ),
             ),
           ],
@@ -153,33 +165,12 @@ class _HomeScreenState extends State<HomeScreen> {
               total: _entries.length,
               films: _filmCount,
               shows: _showCount,
+              games: _gameCount,
               averageRating: _averageRating,
+              accentColor: primaryAccent,
+              isGameMode: isGameMode,
             ),
           ),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: SegmentedButton<MediaFilter>(
-              segments: const [
-                ButtonSegment(value: MediaFilter.all, label: Text('All')),
-                ButtonSegment(value: MediaFilter.films, label: Text('Films')),
-                ButtonSegment(value: MediaFilter.shows, label: Text('Shows')),
-                ButtonSegment(
-                  value: MediaFilter.watchlist,
-                  label: Text('Watchlist'),
-                ),
-                ButtonSegment(
-                  value: MediaFilter.watched,
-                  label: Text('Watched'),
-                ),
-              ],
-              selected: {_filter},
-              onSelectionChanged: (selection) {
-                setState(() => _filter = selection.first);
-              },
-            ),
-          ),
-          const SizedBox(height: 12),
           Expanded(
             child: filtered.isEmpty
                 ? _EmptyState(filter: _filter, onAdd: _showAddSheet)
@@ -203,6 +194,57 @@ class _HomeScreenState extends State<HomeScreen> {
         icon: const Icon(Icons.add),
         label: const Text('Log Title'),
       ),
+      bottomNavigationBar: BottomAppBar(
+        color: isGameMode ? const Color(0xFFF4EEE5) : Colors.black,
+        elevation: 0,
+        height: 88,
+        padding: EdgeInsets.zero,
+        clipBehavior: Clip.none,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              GestureDetector(
+                onTap: () {
+                  setState(() {
+                    _filter = isGameMode ? MediaFilter.films : MediaFilter.games;
+                  });
+                },
+                child: Container(
+                  width: 56,
+                  height: 56,
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: isGameMode ? Colors.blue.shade600 : Colors.green.shade600,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  alignment: Alignment.center,
+                  child: Icon(
+                    isGameMode ? Icons.local_movies : Icons.sports_esports,
+                    color: Colors.white,
+                    size: 26,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    isGameMode
+                        ? 'Switch to movie tracker'
+                        : 'Tap to show games in your tracker.',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: isGameMode ? Colors.black87 : Colors.grey.shade500,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
@@ -212,19 +254,27 @@ class _StatsCard extends StatelessWidget {
     required this.total,
     required this.films,
     required this.shows,
+    required this.games,
     required this.averageRating,
+    required this.accentColor,
+    required this.isGameMode,
   });
 
   final int total;
   final int films;
   final int shows;
+  final int games;
   final double? averageRating;
+  final Color accentColor;
+  final bool isGameMode;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    const gamePanelColor = Color(0xFFEBE0DC);
 
     return Card(
+      color: isGameMode ? gamePanelColor : const Color(0xFF11131A),
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -233,15 +283,15 @@ class _StatsCard extends StatelessWidget {
             Row(
               children: [
                 Icon(
-                  Icons.local_movies_outlined,
-                  color: theme.colorScheme.primary,
+                  isGameMode ? Icons.sports_esports_outlined : Icons.local_movies_outlined,
+                  color: accentColor,
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  'Your Library',
+                  isGameMode ? 'Games Library' : 'Your Library',
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w600,
-                    color: Colors.white,
+                    color: isGameMode ? Colors.black : Colors.white,
                   ),
                 ),
               ],
@@ -249,15 +299,17 @@ class _StatsCard extends StatelessWidget {
             const SizedBox(height: 16),
             Row(
               children: [
-                _StatItem(label: 'Total', value: '$total'),
-                _StatItem(label: 'Films', value: '$films'),
-                _StatItem(label: 'Shows', value: '$shows'),
+                _StatItem(label: 'Total', value: '$total', accentColor: isGameMode ? Colors.black : Colors.white),
+                _StatItem(label: 'Films', value: '$films', accentColor: isGameMode ? Colors.black : Colors.white),
+                _StatItem(label: 'Shows', value: '$shows', accentColor: isGameMode ? Colors.black : Colors.white),
+                _StatItem(label: 'Games', value: '$games', accentColor: isGameMode ? Colors.black : Colors.white),
                 _StatItem(
                   label: 'Avg Rating',
                   value: averageRating == null
                       ? '—'
                       : averageRating!.toStringAsFixed(1),
                   icon: averageRating != null ? Icons.star_rounded : null,
+                  accentColor: isGameMode ? Colors.black : Colors.white,
                 ),
               ],
             ),
@@ -273,11 +325,13 @@ class _StatItem extends StatelessWidget {
     required this.label,
     required this.value,
     this.icon,
+    required this.accentColor,
   });
 
   final String label;
   final String value;
   final IconData? icon;
+  final Color accentColor;
 
   @override
   Widget build(BuildContext context) {
@@ -295,7 +349,7 @@ class _StatItem extends StatelessWidget {
                 value,
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                      color: accentColor,
                     ),
               ),
             ],
@@ -330,7 +384,7 @@ class _EmptyState extends StatelessWidget {
       MediaFilter.all => (
           Icons.movie_creation_outlined,
           'Nothing logged yet',
-          'Start tracking the films and shows you watch.',
+          'Start tracking the films, shows, and games you enjoy.',
         ),
       MediaFilter.films => (
           Icons.movie_outlined,
@@ -341,6 +395,11 @@ class _EmptyState extends StatelessWidget {
           Icons.tv_outlined,
           'No shows logged',
           'Add a TV show to your library.',
+        ),
+      MediaFilter.games => (
+          Icons.sports_esports_outlined,
+          'No games logged',
+          'Add a game to your library.',
         ),
       MediaFilter.watchlist => (
           Icons.bookmark_outline,
@@ -354,6 +413,8 @@ class _EmptyState extends StatelessWidget {
         ),
     };
 
+    final isGameEmpty = filter == MediaFilter.games;
+
     return Center(
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(40),
@@ -361,14 +422,14 @@ class _EmptyState extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.all(32),
               decoration: BoxDecoration(
                 color: theme.colorScheme.primary.withValues(alpha: 0.12),
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 icon,
-                size: 48,
+                size: 40,
                 color: theme.colorScheme.primary,
               ),
             ),
@@ -377,6 +438,7 @@ class _EmptyState extends StatelessWidget {
               title,
               style: theme.textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.bold,
+                color: isGameEmpty ? Colors.black87 : null,
               ),
             ),
             const SizedBox(height: 8),
@@ -384,7 +446,7 @@ class _EmptyState extends StatelessWidget {
               subtitle,
               textAlign: TextAlign.center,
               style: theme.textTheme.bodyMedium?.copyWith(
-                color: Colors.grey.shade500,
+                color: isGameEmpty ? Colors.black54 : Colors.grey.shade500,
               ),
             ),
             if (filter == MediaFilter.all) ...[

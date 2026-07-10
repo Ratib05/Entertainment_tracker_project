@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 
-enum MediaType { film, show }
+enum MediaType { film, show, game }
 
 enum WatchStatus { watchlist, watching, watched }
 
-enum MediaFilter { all, films, shows, watchlist, watched }
+enum MediaFilter { all, films, shows, games, watchlist, watched }
 
 class MediaEntry {
   MediaEntry({
@@ -57,10 +57,27 @@ class MediaEntry {
 }
 
 extension MediaTypeX on MediaType {
-  String get label => this == MediaType.film ? 'Film' : 'Show';
+  String get label {
+    switch (this) {
+      case MediaType.film:
+        return 'Film';
+      case MediaType.show:
+        return 'Show';
+      case MediaType.game:
+        return 'Game';
+    }
+  }
 
-  IconData get icon =>
-      this == MediaType.film ? Icons.movie_outlined : Icons.tv_outlined;
+  IconData get icon {
+    switch (this) {
+      case MediaType.film:
+        return Icons.sports_esports_outlined;
+      case MediaType.show:
+        return Icons.tv_outlined;
+      case MediaType.game:
+        return Icons.sports_esports_outlined;
+    }
+  }
 }
 
 extension WatchStatusX on WatchStatus {

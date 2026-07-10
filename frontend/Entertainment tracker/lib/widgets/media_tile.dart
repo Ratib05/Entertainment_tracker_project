@@ -62,7 +62,9 @@ class MediaTile extends StatelessWidget {
                       end: Alignment.bottomRight,
                       colors: entry.type == MediaType.film
                           ? [const Color(0xFF9333EA), const Color(0xFF581C87)]
-                          : [const Color(0xFF2563EB), const Color(0xFF1E3A8A)],
+                          : entry.type == MediaType.show
+                              ? [const Color(0xFF2563EB), const Color(0xFF1E3A8A)]
+                              : [const Color(0xFF0F766E), const Color(0xFF134E4A)],
                     ),
                     borderRadius: BorderRadius.circular(10),
                   ),
@@ -94,7 +96,9 @@ class MediaTile extends StatelessWidget {
                             label: entry.type.label,
                             color: entry.type == MediaType.film
                                 ? const Color(0xFF9333EA)
-                                : const Color(0xFF2563EB),
+                                : entry.type == MediaType.show
+                                    ? const Color(0xFF2563EB)
+                                    : const Color(0xFF14B8A6),
                           ),
                           _Badge(label: entry.status.label, color: statusColor),
                           if (entry.type == MediaType.show &&

@@ -85,11 +85,9 @@ Track your entertainment habits with:
 - Dart
 
 ### Backend
-- Django
-- Django REST Framework
-
-### Database
-- PostgreSQL
+- NestJS
+- TypeScript
+- Supabase (PostgreSQL)
 
 ### APIs
 Possible integrations include:
@@ -102,13 +100,11 @@ Possible integrations include:
 ## Project Structure
 
 ```
-EntertainmentTracker/
+Entertainment_tracker_project/
 │
-├── frontend/          # Flutter application
-├── backend/           # Django backend
-├── docs/              # Documentation
-├── assets/            # Images, icons, fonts
-├── database/          # Database scripts
+├── frontend/          # Flutter application (run flutter commands here)
+├── backend/           # NestJS backend API
+├── docs/              # Project notes and documentation
 └── README.md
 ```
 
@@ -143,18 +139,10 @@ flutter run
 ```bash
 cd backend
 
-python -m venv .venv
+npm install
+cp .env.example .env   # macOS/Linux — use copy on Windows
 
-# Windows
-.venv\Scripts\activate
-
-# macOS/Linux
-source .venv/bin/activate
-
-pip install -r requirements.txt
-
-python manage.py migrate
-python manage.py runserver
+npm run start:dev
 ```
 
 ---

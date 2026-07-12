@@ -6,20 +6,20 @@
     "configurations": [
         {
             "name": "Entertainment tracker",
-            "cwd": "frontend\\Entertainment tracker",
+            "cwd": "frontend",
             "request": "launch",
             "type": "dart"
         },
         {
             "name": "Entertainment tracker (profile mode)",
-            "cwd": "frontend\\Entertainment tracker",
+            "cwd": "frontend",
             "request": "launch",
             "type": "dart",
             "flutterMode": "profile"
         },
         {
             "name": "Entertainment tracker (release mode)",
-            "cwd": "frontend\\Entertainment tracker",
+            "cwd": "frontend",
             "request": "launch",
             "type": "dart",
             "flutterMode": "release"

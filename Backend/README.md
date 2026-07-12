@@ -1,4 +1,4 @@
-"""# Entertainment Tracker Backend 🎬🎮📺
+# Entertainment Tracker Backend 🎬🎮📺
 
 Welcome to the backend repository for the **Entertainment Tracker** application. This is a robust, production-grade REST API built using **NestJS** and **TypeScript**, integrated with **Supabase (PostgreSQL)**, and designed to manage users, libraries, custom lists, reviews, and cross-media tracking metadata consolidated from external APIs (**TMDb** and **IGDB**).
 

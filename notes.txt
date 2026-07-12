@@ -1,0 +1,10 @@
+We can use this to communicate ideas and comments so that we can see them in the IDE instead of going to out DM to see.
+
+I checked your UI. I like it but couple of things
+    Its a bit dark, maybe play around with colours
+    the add item thingy could be just a '+' symbol
+    this is about the function of the 'add item', consider filtering by type rather an option specifying the type of thingy, ifykwim
+I'll add some design inspo in the google doc
+
+I'm also setting up the NestJS backend, you will probably have to install NestJS onto your local machine as well. 
+I will add a README file in the backend folder to help.

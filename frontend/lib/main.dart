@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'screens/home_screen.dart';
+import 'screens/tracker_shell.dart';
 import 'theme/app_theme.dart';
 
 void main() {
@@ -13,10 +13,10 @@ class ReelLogApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'RXD A1',
+      title: 'Entertainment tracker',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
-      home: const HomeScreen(),
+      home: const TrackerShell(),
     );
   }
 }

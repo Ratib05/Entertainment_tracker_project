@@ -1,4 +1,4 @@
-package com.example.rxd_a1
+package com.example.entertainment_tracker
 
 import io.flutter.embedding.android.FlutterActivity
 

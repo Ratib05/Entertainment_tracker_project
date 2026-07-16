@@ -1,6 +1,6 @@
 {
-    "name": "RXD A1",
-    "short_name": "RXD A1",
+    "name": "Entertainment tracker",
+    "short_name": "Entertainment tracker",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

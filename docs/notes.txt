@@ -1,10 +1,258 @@
-We can use this to communicate ideas and comments so that we can see them in the IDE instead of going to out DM to see.
+TODO backend:
+## Next implementation plan for backend modules
 
-I checked your UI. I like it but couple of things
-    Its a bit dark, maybe play around with colours
-    the add item thingy could be just a '+' symbol
-    this is about the function of the 'add item', consider filtering by type rather an option specifying the type of thingy, ifykwim
-I'll add some design inspo in the google doc
+The backend already has the seven core modules scaffolded and wired in `src/app.module.ts`. Here is the next step-by-step plan for each module, including which files to flesh out and what additional files/logic to add.
 
-I'm also setting up the NestJS backend, you will probably have to install NestJS onto your local machine as well. 
-I will add a README file in the backend folder to help.
+---
+
+### 1. `auth` module
+
+Files:
+- `src/auth/auth.controller.ts`
+- `src/auth/auth.service.ts`
+- `src/auth/auth.module.ts`
+
+Add:
+- DTOs:
+  - `src/auth/dto/register.dto.ts`
+  - `src/auth/dto/login.dto.ts`
+- Auth strategy files:
+  - `src/auth/jwt.strategy.ts`
+  - `src/auth/local.strategy.ts` (optional)
+- Guards/providers:
+  - `JwtAuthGuard`
+  - `PassportModule`
+  - `JwtModule` import in `AuthModule`
+
+Controller endpoints:
+- `POST /auth/register`
+- `POST /auth/login`
+
+Service methods:
+- `register()`
+- `login()`
+- `validateUser()`
+
+Also add config support and env variables for:
+- `JWT_SECRET`
+- `SUPABASE_URL`
+- `SUPABASE_KEY`
+- `TMDB_API_KEY`
+- `IGDB_CLIENT_ID`
+- `IGDB_CLIENT_SECRET`
+
+---
+
+### 2. `users` module
+
+Files:
+- `src/users/users.controller.ts`
+- `src/users/users.service.ts`
+- `src/users/users.module.ts`
+
+Add:
+- DTOs:
+  - `src/users/dto/create-user.dto.ts`
+  - `src/users/dto/update-user.dto.ts`
+  - `src/users/dto/user-profile.dto.ts`
+- Endpoints:
+  - `GET /users/me`
+  - `GET /users/:id`
+  - `PATCH /users/:id` or `PATCH /users/me`
+- Protect routes with `JwtAuthGuard`
+
+Service methods:
+- `findOne()`
+- `findByEmail()`
+- `updateProfile()`
+
+---
+
+### 3. `entertainment` module
+
+Files:
+- `src/entertainment/entertainment.controller.ts`
+- `src/entertainment/entertainment.service.ts`
+- `src/entertainment/entertainment.module.ts`
+
+Add:
+- DTOs:
+  - `src/entertainment/dto/search-entertainment.dto.ts`
+  - `src/entertainment/dto/media-detail.dto.ts` or route params
+- Use `@nestjs/axios` / `HttpModule`
+- Implement proxy logic to:
+  - TMDb for movies/TV
+  - IGDB for games
+
+Controller endpoints:
+- `GET /entertainment/search`
+- `GET /entertainment/:type/:id` or similar
+- optionally: `GET /entertainment/trending`
+
+Service methods:
+- `searchMedia()`
+- `getMediaDetails()`
+- `normalizeMediaResult()`
+
+---
+
+### 4. `library` module
+
+Files:
+- `src/library/library.controller.ts`
+- `src/library/library.service.ts`
+- `src/library/library.module.ts`
+
+Add:
+- DTOs:
+  - `src/library/dto/create-library-item.dto.ts`
+  - `src/library/dto/update-library-item.dto.ts`
+- Endpoints:
+  - `GET /library`
+  - `POST /library`
+  - `PATCH /library/:id`
+  - `DELETE /library/:id`
+
+Service methods:
+- `getLibraryEntries()`
+- `addEntry()`
+- `updateEntry()`
+- `removeEntry()`
+
+This should connect to the persistence layer (Supabase or DB), and store item status like `want_to_watch`, `watching`, `completed`, `paused`.
+
+---
+
+### 5. `reviews` module
+
+Files:
+- `src/reviews/reviews.controller.ts`
+- `src/reviews/reviews.service.ts`
+- `src/reviews/reviews.module.ts`
+
+Add:
+- DTOs:
+  - `src/reviews/dto/create-review.dto.ts`
+  - `src/reviews/dto/update-review.dto.ts`
+- Endpoints:
+  - `POST /reviews`
+  - `GET /reviews/:mediaId`
+  - `PATCH /reviews/:id`
+  - `DELETE /reviews/:id`
+
+Service methods:
+- `createReview()`
+- `getReviewsForMedia()`
+- `updateReview()`
+- `deleteReview()`
+
+---
+
+### 6. `lists` module
+
+Files:
+- `src/lists/lists.controller.ts`
+- `src/lists/lists.service.ts`
+- `src/lists/lists.module.ts`
+
+Add:
+- DTOs:
+  - `src/lists/dto/create-list.dto.ts`
+  - `src/lists/dto/update-list.dto.ts`
+  - `src/lists/dto/add-item-to-list.dto.ts`
+- Endpoints:
+  - `POST /lists`
+  - `GET /lists`
+  - `GET /lists/:id`
+  - `PATCH /lists/:id`
+  - `DELETE /lists/:id`
+  - `POST /lists/:id/items`
+
+Service methods:
+- `createList()`
+- `getLists()`
+- `getListById()`
+- `updateList()`
+- `deleteList()`
+- `addItemToList()`
+
+---
+
+### 7. `statistics` module
+
+Files:
+- `src/statistics/statistics.controller.ts`
+- `src/statistics/statistics.service.ts`
+- `src/statistics/statistics.module.ts`
+
+Add:
+- DTOs or query params:
+  - `src/statistics/dto/statistics-query.dto.ts`
+- Endpoints:
+  - `GET /statistics/summary`
+  - `GET /statistics/yearly`
+  - `GET /statistics/genre`
+- Service methods:
+  - `getSummary()`
+  - `getYearlyBreakdown()`
+  - `getGenreStats()`
+
+This module should aggregate user library + review data and return analytics.
+
+---
+
+## Common shared work
+
+Create shared/common support files:
+- `src/common/filters/http-exception.filter.ts`
+- `src/common/pipes/validation.pipe.ts`
+- `src/common/interceptors/logging.interceptor.ts`
+- `src/common/guards/jwt-auth.guard.ts`
+
+Update:
+- `src/main.ts` to enable global validation pipe:
+  - `app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));`
+- `src/app.module.ts` to import:
+  - `ConfigModule.forRoot({ isGlobal: true })`
+  - `HttpModule`
+  - `JwtModule.register(...)` in `AuthModule`
+
+---
+
+## Recommended file additions
+
+Use this pattern inside each feature folder:
+- `dto/`
+- `entities/` or `models/`
+- `interfaces/`
+
+Example:
+- `src/library/dto/create-library-item.dto.ts`
+- `src/library/entities/library-item.entity.ts`
+
+---
+
+## Recommended dependency setup
+
+Install these if not already present:
+```bash
+cd backend/nest-api
+
+npm install @nestjs/config @nestjs/jwt @nestjs/passport passport passport-jwt class-validator class-transformer @nestjs/axios axios
+npm install -D @types/passport-jwt
+```
+
+---
+
+## Summary
+
+The scaffold is already correct:
+- modules exist
+- route prefixes exist
+- `AppModule` imports all feature modules
+
+What remains is:
+1. add DTOs/routes
+2. implement service business logic
+3. wire auth and persistence
+4. add shared validation and config

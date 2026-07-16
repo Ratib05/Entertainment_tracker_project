@@ -1,10 +1,50 @@
-We can use this to communicate ideas and comments so that we can see them in the IDE instead of going to out DM to see.
+TODO Front-end:
 
-I checked your UI. I like it but couple of things
-    Its a bit dark, maybe play around with colours
-    the add item thingy could be just a '+' symbol
-    this is about the function of the 'add item', consider filtering by type rather an option specifying the type of thingy, ifykwim
-I'll add some design inspo in the google doc
+### Key gaps / what is left
 
-I'm also setting up the NestJS backend, you will probably have to install NestJS onto your local machine as well. 
-I will add a README file in the backend folder to help.
+1. Persistence / backend integration
+   - memory_library_repository.dart stores data only in memory.
+   - App currently loses all entries on restart.
+   - No backend/API connection exists in the front-end.
+   - If you want a full product, replace or extend `LibraryRepository` with:
+     - local persistence (SQLite, Hive, SharedPreferences, file storage)
+     - or remote API calls to nest-api
+
+2. Games empty state missing action
+   - `GamesScreen` empty state does not call `onAdd`.
+   - `MoviesScreen` has a CTA button; games screen should also offer one.
+
+3. App features still missing
+   - search/filter by title/status/type
+   - sorting by date, rating, status
+   - more explicit delete confirmation/undo
+   - settings or preferences screen
+   - better watched-date editing (currently auto-sets to now on status watched)
+
+4. Testing
+   - no front-end tests beyond default Flutter scaffold
+   - add widget tests for:
+     - entry creation
+     - edit flow
+     - delete flow
+     - screen switching
+     - repository persistence logic
+
+5. UX polish / completeness
+   - unify light/dark styling across game and movie themes
+   - possible improvement: consistent empty state CTA for both modes
+   - maybe add app-level navigation or more organized library view
+
+### Summary
+
+The front-end is mostly built as a UI shell with add/edit and list display, but it is not finished as a complete app because:
+
+- storage is temporary only
+- backend integration is absent
+- there are missing UX actions in the games empty state
+- search/sort/filter and tests are not implemented
+
+If your goal is to complete the front-end, the highest-priority work is:
+1. add data persistence/backend integration
+2. fix the games empty state CTA
+3. add search/filter/sort and tests

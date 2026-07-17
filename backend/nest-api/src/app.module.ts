@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { UsersModule } from './users/users.module';
@@ -11,7 +12,17 @@ import { AuthModule } from './auth/auth.module';
 import { SupabaseModule } from './supabase/supabase.module';
 
 @Module({
-  imports: [UsersModule, EntertainmentModule, LibraryModule, ReviewsModule, ListsModule, StatisticsModule, AuthModule, SupabaseModule],
+  imports: [
+    ConfigModule.forRoot({ isGlobal: true }),
+    UsersModule,
+    EntertainmentModule,
+    LibraryModule,
+    ReviewsModule,
+    ListsModule,
+    StatisticsModule,
+    AuthModule,
+    SupabaseModule,
+  ],
   controllers: [AppController],
   providers: [AppService],
 })

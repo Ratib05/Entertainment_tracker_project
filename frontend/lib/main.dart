@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'screens/tracker_shell.dart';
+import 'screens/login_screen.dart';
 import 'theme/app_theme.dart';
 
 void main() {
@@ -16,7 +16,7 @@ class ReelLogApp extends StatelessWidget {
       title: 'Entertainment tracker',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
-      home: const TrackerShell(),
+      home: const LoginScreen(),
     );
   }
 }

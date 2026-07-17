@@ -88,10 +88,15 @@ class _TrackerShellState extends State<TrackerShell> {
           rating: result['rating'] as int?,
           season: result['season'] as int?,
           watchedDate: result['watchedDate'] as DateTime?,
-          // These flags tell copyWith to explicitly set these fields to null
+          posterUrl: result['posterUrl'] as String?,
+          year: result['year'] as int?,
+          tmdbId: result['tmdbId'] as int?,
           clearRating: result['rating'] == null,
           clearSeason: result['season'] == null,
           clearWatchedDate: result['watchedDate'] == null,
+          clearPosterUrl: result['posterUrl'] == null,
+          clearYear: result['year'] == null,
+          clearTmdbId: result['tmdbId'] == null,
         ),
       );
     });
@@ -104,7 +109,6 @@ class _TrackerShellState extends State<TrackerShell> {
     setState(() {
       _repository.add(
         MediaEntry(
-          // Generate unique ID from repository
           id: _repository.nextId(),
           title: result['title'] as String,
           note: result['note'] as String,
@@ -114,6 +118,9 @@ class _TrackerShellState extends State<TrackerShell> {
           season: result['season'] as int?,
           loggedAt: DateTime.now(),
           watchedDate: result['watchedDate'] as DateTime?,
+          posterUrl: result['posterUrl'] as String?,
+          year: result['year'] as int?,
+          tmdbId: result['tmdbId'] as int?,
         ),
       );
     });

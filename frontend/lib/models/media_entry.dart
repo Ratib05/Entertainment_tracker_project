@@ -34,6 +34,9 @@ class MediaEntry {
     required this.loggedAt,
     /// When the user finished watching/playing (null if not watched yet)
     this.watchedDate,
+    this.posterUrl,
+    this.year,
+    this.tmdbId,
   });
 
   /// Unique identifier for this entry
@@ -54,6 +57,9 @@ class MediaEntry {
   final DateTime loggedAt;
   /// When it was completed (if applicable)
   final DateTime? watchedDate;
+  final String? posterUrl;
+  final int? year;
+  final int? tmdbId;
 
   /// copyWith creates a modified copy of this entry.
   /// This is useful for updating specific fields without recreating the entire object.
@@ -66,26 +72,30 @@ class MediaEntry {
     String? note,
     int? season,
     DateTime? watchedDate,
-    // Flags to explicitly clear nullable fields (set them to null)
+    String? posterUrl,
+    int? year,
+    int? tmdbId,
     bool clearRating = false,
     bool clearSeason = false,
     bool clearWatchedDate = false,
+    bool clearPosterUrl = false,
+    bool clearYear = false,
+    bool clearTmdbId = false,
   }) {
     return MediaEntry(
-      // ID never changes for an existing entry
       id: id,
       title: title ?? this.title,
       type: type ?? this.type,
       status: status ?? this.status,
-      // Use clearRating flag to allow setting rating to null
-      // Otherwise use provided rating or keep current value
       rating: clearRating ? null : (rating ?? this.rating),
       note: note ?? this.note,
       season: clearSeason ? null : (season ?? this.season),
-      // loggedAt never changes after creation
       loggedAt: loggedAt,
       watchedDate:
           clearWatchedDate ? null : (watchedDate ?? this.watchedDate),
+      posterUrl: clearPosterUrl ? null : (posterUrl ?? this.posterUrl),
+      year: clearYear ? null : (year ?? this.year),
+      tmdbId: clearTmdbId ? null : (tmdbId ?? this.tmdbId),
     );
   }
 }

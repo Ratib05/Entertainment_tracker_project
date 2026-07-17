@@ -78,23 +78,45 @@ class MediaTile extends StatelessWidget {
                   width: 52,
                   height: 72,
                   decoration: BoxDecoration(
-                    // Different gradient for each media type
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: entry.type == MediaType.film
-                          ? [const Color(0xFF9333EA), const Color(0xFF581C87)] // Purple
-                          : entry.type == MediaType.show
-                              ? [const Color(0xFF2563EB), const Color(0xFF1E3A8A)] // Blue
-                              : [const Color(0xFF0F766E), const Color(0xFF134E4A)], // Teal
-                    ),
+                    gradient: entry.posterUrl == null
+                        ? LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: entry.type == MediaType.film
+                                ? [
+                                    const Color(0xFF9333EA),
+                                    const Color(0xFF581C87)
+                                  ]
+                                : entry.type == MediaType.show
+                                    ? [
+                                        const Color(0xFF2563EB),
+                                        const Color(0xFF1E3A8A)
+                                      ]
+                                    : [
+                                        const Color(0xFF0F766E),
+                                        const Color(0xFF134E4A)
+                                      ],
+                          )
+                        : null,
+                    color: entry.posterUrl == null ? null : Colors.black,
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: Icon(
-                    entry.type.icon,
-                    color: Colors.white.withValues(alpha: 0.9),
-                    size: 28,
-                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: entry.posterUrl != null
+                      ? Image.network(
+                          entry.posterUrl!,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) => Icon(
+                            entry.type.icon,
+                            color: Colors.white.withValues(alpha: 0.9),
+                            size: 28,
+                          ),
+                        )
+                      : Icon(
+                          entry.type.icon,
+                          color: Colors.white.withValues(alpha: 0.9),
+                          size: 28,
+                        ),
                 ),
                 
                 const SizedBox(width: 14),
@@ -106,7 +128,9 @@ class MediaTile extends StatelessWidget {
                     children: [
                       // ========== TITLE ==========
                       Text(
-                        entry.title,
+                        entry.year == null
+                            ? entry.title
+                            : '${entry.title} (${entry.year})',
                         style: theme.textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.w700,
                           color: Colors.white,

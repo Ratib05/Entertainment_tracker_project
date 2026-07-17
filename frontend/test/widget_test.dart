@@ -3,9 +3,25 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:entertainment_tracker/main.dart';
 
+Future<void> _logIn(WidgetTester tester) async {
+  await tester.enterText(
+    find.byType(TextFormField).at(0),
+    'user@example.com',
+  );
+  await tester.enterText(
+    find.byType(TextFormField).at(1),
+    'password123',
+  );
+  await tester.tap(find.widgetWithText(FilledButton, 'Log in'));
+  await tester.pumpAndSettle();
+}
+
 void main() {
   testWidgets('Movies mode loads and can log a film', (WidgetTester tester) async {
     await tester.pumpWidget(const ReelLogApp());
+
+    expect(find.text('Entertainment Tracker'), findsOneWidget);
+    await _logIn(tester);
 
     expect(find.text('Movies and Shows Tracker'), findsOneWidget);
     expect(find.text('Nothing logged yet'), findsOneWidget);
@@ -26,6 +42,7 @@ void main() {
 
   testWidgets('Games mode can log a game', (WidgetTester tester) async {
     await tester.pumpWidget(const ReelLogApp());
+    await _logIn(tester);
 
     await tester.tap(find.byIcon(Icons.sports_esports));
     await tester.pumpAndSettle();

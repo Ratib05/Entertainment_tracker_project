@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient, User } from '@supabase/supabase-js';
 
 @Injectable()
 export class SupabaseService {
@@ -24,6 +24,16 @@ export class SupabaseService {
 
   getClient(): SupabaseClient {
     return this.client;
+  }
+
+  async getUserByAccessToken(token: string): Promise<User> {
+    const { data, error } = await this.client.auth.getUser(token);
+    if (error || !data?.user) {
+      const message = error?.message ?? 'Invalid access token';
+      this.logger.warn('Invalid access token', message);
+      throw new Error(message);
+    }
+    return data.user;
   }
 }
 

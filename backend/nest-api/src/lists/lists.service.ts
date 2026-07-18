@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, InternalServerErrorException } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import { CreateListDto } from './dto/create-list.dto';
 import { UpdateListDto } from './dto/update-list.dto';
@@ -14,7 +14,7 @@ export class ListsService {
       .from('lists')
       .select('*, list_items(*, entertainment(*))')
       .eq('user_id', userId);
-    if (error) throw new Error(error.message);
+    if (error) throw new InternalServerErrorException(`Failed to fetch lists: ${error.message}`);
     return data;
   }
 
@@ -39,7 +39,7 @@ export class ListsService {
       .insert({ ...createListDto, user_id: userId })
       .select()
       .single();
-    if (error) throw new Error(error.message);
+    if (error) throw new InternalServerErrorException(`Failed to create list: ${error.message}`);
     return data;
   }
 
@@ -97,7 +97,7 @@ export class ListsService {
         order_index: addListItemDto.order_index ?? 0,
       })
       .select();
-    if (error) throw new Error(error.message);
+    if (error) throw new InternalServerErrorException(`Failed to add list item: ${error.message}`);
     return data;
   }
 

@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, InternalServerErrorException } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import { CreateReviewDto } from './dto/create-review.dto';
 import { UpdateReviewDto } from './dto/update-review.dto';
@@ -13,7 +13,7 @@ export class ReviewsService {
       .from('reviews')
       .select('*, entertainment(*)')
       .eq('user_id', userId);
-    if (error) throw new Error(error.message);
+    if (error) throw new InternalServerErrorException(`Failed to fetch reviews: ${error.message}`);
     return data;
   }
 
@@ -38,7 +38,7 @@ export class ReviewsService {
       user_id: userId,
     };
     const { data, error } = await client.from('reviews').insert(insertBody).select().single();
-    if (error) throw new Error(error.message);
+    if (error) throw new InternalServerErrorException(`Failed to create review: ${error.message}`);
     return data;
   }
 

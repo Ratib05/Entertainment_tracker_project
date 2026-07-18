@@ -4,7 +4,7 @@ import { WatchStatus } from '../../common/enums/watch-status.enum';
 export class CreateLibraryItemDto {
   @IsUUID()
   @IsNotEmpty()
-  entertainment_id: string;
+  entertainment_id!: string;
 
   @IsEnum(WatchStatus)
   @IsOptional()

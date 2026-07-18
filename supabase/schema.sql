@@ -9,7 +9,7 @@ create type public.watch_status as enum ('watchlist', 'watching', 'watched');
 
 -- Users
 create table public.users (
-  id uuid not null primary key default gen_random_uuid(),
+  id uuid not null primary key references auth.users(id) on delete cascade,
   username text unique,
   email text not null unique,
   avatar_url text,

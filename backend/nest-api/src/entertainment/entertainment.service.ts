@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, InternalServerErrorException } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import { CreateEntertainmentDto } from './dto/create-entertainment.dto';
 import { UpdateEntertainmentDto } from './dto/update-entertainment.dto';
@@ -10,7 +10,7 @@ export class EntertainmentService {
   async findAll() {
     const client = this.supabaseService.getClient();
     const { data, error } = await client.from('entertainment').select('*');
-    if (error) throw new Error(error.message);
+    if (error) throw new InternalServerErrorException(`Failed to fetch entertainment: ${error.message}`);
     return data;
   }
 
@@ -26,7 +26,7 @@ export class EntertainmentService {
   async create(createEntertainmentDto: CreateEntertainmentDto) {
     const client = this.supabaseService.getClient();
     const { data, error } = await client.from('entertainment').insert(createEntertainmentDto).select().single();
-    if (error) throw new Error(error.message);
+    if (error) throw new InternalServerErrorException(`Failed to create entertainment: ${error.message}`);
     return data;
   }
 

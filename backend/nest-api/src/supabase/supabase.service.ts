@@ -8,10 +8,10 @@ export class SupabaseService {
 
   constructor() {
     const url = process.env.SUPABASE_URL;
-    const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const key = process.env.SUPABASE_ANON_KEY;
 
     if (!url || !key) {
-      this.logger.error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');
+      this.logger.error('Missing SUPABASE_URL or SUPABASE_ANON_KEY');
       throw new Error('Supabase configuration is required');
     }
 

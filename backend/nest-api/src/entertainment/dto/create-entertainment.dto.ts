@@ -4,10 +4,10 @@ import { MediaType } from '../../common/enums/media-type.enum';
 export class CreateEntertainmentDto {
   @IsString()
   @IsNotEmpty()
-  title: string;
+  title!: string;
 
   @IsEnum(MediaType)
-  type: MediaType;
+  type!: MediaType;
 
   @IsString()
   @IsOptional()

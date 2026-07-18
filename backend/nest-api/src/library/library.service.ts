@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, InternalServerErrorException } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import { CreateLibraryItemDto } from './dto/create-library-item.dto';
 import { UpdateLibraryItemDto } from './dto/update-library-item.dto';
@@ -13,7 +13,7 @@ export class LibraryService {
       .from('user_library')
       .select('*, entertainment(*)')
       .eq('user_id', userId);
-    if (error) throw new Error(error.message);
+    if (error) throw new InternalServerErrorException(`Failed to fetch library items: ${error.message}`);
     return data;
   }
 
@@ -38,7 +38,7 @@ export class LibraryService {
       user_id: userId,
     };
     const { data, error } = await client.from('user_library').insert(insertBody).select().single();
-    if (error) throw new Error(error.message);
+    if (error) throw new InternalServerErrorException(`Failed to add library item: ${error.message}`);
     return data;
   }
 

@@ -1,50 +1,77 @@
-TODO Front-end:
+Security vulns:
 
-### Key gaps / what is left
+Findings (prioritized)
 
-1. Persistence / backend integration
-   - memory_library_repository.dart stores data only in memory.
-   - App currently loses all entries on restart.
-   - No backend/API connection exists in the front-end.
-   - If you want a full product, replace or extend `LibraryRepository` with:
-     - local persistence (SQLite, Hive, SharedPreferences, file storage)
-     - or remote API calls to nest-api
+- **Service role key usage — Risk: High**: The server creates a Supabase client using the service role key and that same client is used for most DB operations (privileged key in server code).
+  - Evidence: supabase.service.ts
+  - Why it matters: The service role key bypasses Row-Level Security (RLS). If any endpoint fails to enforce per-user filtering, it can allow privilege escalation or unauthorized data access.
+  - Recommendation: Use the service role key only for truly privileged operations. For per-user queries either:
+    - Enforce RLS on the DB and use an anon key or use the user's JWT with the Supabase client (set auth to the user JWT) so RLS applies; or
+    - Maintain two clients (service client for privileged admin ops, and a user-scoped client or RPCs that enforce RLS) and audit every service method to ensure the correct client is used.
+  - Files to review for enforcement: service creation supabase.service.ts, and service usages (examples): library.service.ts, lists.service.ts, entertainment.service.ts.
 
-2. Games empty state missing action
-   - `GamesScreen` empty state does not call `onAdd`.
-   - `MoviesScreen` has a CTA button; games screen should also offer one.
+- **Missing/incorrect security headers — Risk: Medium**: The app sets `X-XSS-Protection` to `'0'`, and CSP/HSTS are not applied.
+  - Evidence: main.ts
+  - Why it matters: `X-XSS-Protection: 0` disables an older browser mitigation; absence of CSP and HSTS reduces defense-in-depth against XSS and mixed-content/transport downgrade attacks.
+  - Recommendation: Remove the `X-XSS-Protection` header or set modern headers via `helmet()` (recommended). Add Content-Security-Policy and Strict-Transport-Security in production. Example: apply Nest/Express `helmet()` and tune CSP.
 
-3. App features still missing
-   - search/filter by title/status/type
-   - sorting by date, rating, status
-   - more explicit delete confirmation/undo
-   - settings or preferences screen
-   - better watched-date editing (currently auto-sets to now on status watched)
+- **In-memory rate limiter — Risk: Medium**: Rate limiting is implemented with a static in-memory Map (single-process).
+  - Evidence: rate-limit.guard.ts
+  - Why it matters: In-memory limiters do not scale across cluster/replica instances and are bypassable by rotating IPs; they can be memory/CPU DoS targets.
+  - Recommendation: Replace with a distributed store backed rate limiter (Redis-based) or a battle-tested middleware like `express-rate-limit` with a Redis store or `rate-limiter-flexible`. Emit and monitor rate-limit headers.
 
-4. Testing
-   - no front-end tests beyond default Flutter scaffold
-   - add widget tests for:
-     - entry creation
-     - edit flow
-     - delete flow
-     - screen switching
-     - repository persistence logic
+- **Error message / stack exposure in non-prod — Risk: Medium**: The global exception filter includes exception messages (and logs stack traces).
+  - Evidence: http-exception.filter.ts
+  - Why it matters: In non-production, returning detailed error messages can leak internal implementation details and sensitive information.
+  - Recommendation: Return generic client messages; record stack traces in server logs only. Ensure `NODE_ENV` is set in production.
 
-5. UX polish / completeness
-   - unify light/dark styling across game and movie themes
-   - possible improvement: consistent empty state CTA for both modes
-   - maybe add app-level navigation or more organized library view
+- **CORS configuration risks — Risk: Medium**: CORS is enabled if `CORS_ORIGIN` is set and the value is used directly; a wildcard or misconfigured origin could allow unwanted cross-origin requests.
+  - Evidence: main.ts
+  - Recommendation: Validate/whitelist origins (do not accept `*` if credentials used). Explicitly control allowed methods, headers, and credentials.
 
-### Summary
+- **Missing HTTPS enforcement / HSTS — Risk: Medium**: No HSTS header or HTTPS redirect enforcement in code.
+  - Evidence: no HSTS logic in main.ts
+  - Recommendation: Enforce HTTPS at load balancer or app level and add HSTS in production.
 
-The front-end is mostly built as a UI shell with add/edit and list display, but it is not finished as a complete app because:
+- **Secrets management & accidental exposure — Risk: High (operational)**: Ensure SUPABASE_SERVICE_ROLE_KEY and other secrets are never committed, rotated regularly, and stored in a secret manager.
+  - Evidence: service-role key referenced in code: supabase.service.ts; .env.example does not show service role key (good), but verify no commits contain secrets.
+  - Recommendation: Use CI/CD secret stores, restrict who can access keys, rotate keys, and add a pre-commit hook / secret-scan to prevent accidental commits.
 
-- storage is temporary only
-- backend integration is absent
-- there are missing UX actions in the games empty state
-- search/sort/filter and tests are not implemented
+- **Public endpoints returning all fields — Risk: Low → Medium**: Public endpoints like entertainment GETs return `*` (all columns).
+  - Evidence: entertainment.service.ts
+  - Why it matters: If DB rows contain sensitive fields, `select('*')` could leak them.
+  - Recommendation: Explicitly select only required public fields or sanitize responses.
 
-If your goal is to complete the front-end, the highest-priority work is:
-1. add data persistence/backend integration
-2. fix the games empty state CTA
-3. add search/filter/sort and tests
+- **Dependency & supply-chain risk — Risk: Medium**: Several dependencies should be audited and kept up to date (`@supabase/supabase-js`, `axios`, `passport`, Nest deps).
+  - Evidence: package.json
+  - Recommendation: Run `npm audit`, use lockfile, enable Dependabot or Snyk, and update critical dependencies promptly.
+
+- **Inconsistent env var usage (src vs compiled dist) — Risk: Low**: Dist folder references might expect a different env var (e.g., ANON vs SERVICE key); verify runtime uses correct env names.
+  - Evidence: compiled dist mentions `SUPABASE_ANON_KEY` while source uses `SUPABASE_SERVICE_ROLE_KEY`.
+  - Recommendation: Standardize env var names and document them; ensure build/runtime use same vars.
+
+Quick actionable commands
+- Run dependency and secret checks:
+  - `cd backend/nest-api && npm audit --audit-level=moderate`
+  - `cd backend/nest-api && npm outdated`
+  - (optional) `npx snyk test` or enable Snyk/GitHub Dependabot
+- Search for committed secrets:
+  - `git grep -n "SUPABASE_SERVICE_ROLE_KEY\|SUPABASE_ANON_KEY\|API_KEY\|SECRET" || true`
+- Add Helmet and CSP (dev example):
+  - `npm install helmet`
+  - then in bootstrap: `app.use(helmet());` and configure CSP for production.
+
+Minimal prioritized remediation roadmap
+1. Replace/mitigate service-role misuse (design decision: split clients or enforce RLS + use user auth). (High)
+2. Add/replace security headers via `helmet()` and add CSP/HSTS. (Medium)
+3. Replace in-memory rate limiter with Redis-backed limiter or a cloud API gateway rate-limits. (Medium)
+4. Harden error responses (do not return internal messages in non-prod incorrectly). (Medium)
+5. Run `npm audit` and update high/critical deps; enable automated dependency scanning. (Medium)
+6. Verify CORS policy and disallow wildcards/credentials unless necessary. (Medium)
+7. Ensure secrets are in secret manager and rotate service keys. (High/operational)
+
+Would you like me to:
+- run `npm audit` and produce an actionable dependency-upgrade plan, or
+- create PR patches to (a) add helmet + CSP, (b) replace the X-XSS-Protection header, and (c) wire a Redis-backed rate limiter (I will draft changes and tests)?
+
+If you want the code changes, tell me which of the remediation tasks to implement first and whether I should open a branch/PR.

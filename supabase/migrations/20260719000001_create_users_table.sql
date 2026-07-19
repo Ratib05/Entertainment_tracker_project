@@ -1,7 +1,7 @@
 -- Create users table with authentication
 CREATE TABLE public.users (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-  username VARCHAR(50) UNIQUE NOT NULL,
+  username VARCHAR(50) UNIQUE,
   email VARCHAR(255) UNIQUE NOT NULL,
   full_name VARCHAR(255),
   avatar_url TEXT,
@@ -26,6 +26,10 @@ CREATE POLICY "Users can view own profile" ON public.users
 CREATE POLICY "Users can view public profiles" ON public.users
   FOR SELECT
   USING (true);
+
+-- Users can insert their own profile
+CREATE POLICY "Users can insert own profile" ON public.users
+  FOR INSERT WITH CHECK (auth.uid() = id);
 
 -- Users can update their own profile
 CREATE POLICY "Users can update own profile" ON public.users

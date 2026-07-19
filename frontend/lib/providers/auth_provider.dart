@@ -43,9 +43,15 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
+      final Map<String, dynamic> metadata = {};
+      if (username != null && username.isNotEmpty) {
+        metadata['username'] = username;
+      }
+
       final AuthResponse response = await supabaseClient.auth.signUp(
         email: email,
         password: password,
+        data: metadata.isNotEmpty ? metadata : null,
       );
 
       _currentUser = response.user;
@@ -53,15 +59,6 @@ class AuthProvider extends ChangeNotifier {
 
       if (_accessToken != null) {
         apiService.setAuthToken(_accessToken!);
-
-        // Create user profile with username
-        if (username != null && _currentUser != null) {
-          await supabaseClient.from('users').insert({
-            'id': _currentUser!.id,
-            'email': email,
-            'username': username,
-          });
-        }
       }
 
       notifyListeners();

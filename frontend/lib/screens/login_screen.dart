@@ -227,7 +227,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   ),
                                   _buildPasswordRequirement(
                                     'At least 1 special character (!@#\$%)',
-                                    _passwordController.text.contains(RegExp(r'[!@#$%^&*()_+\-=\[\]{};:\'",./<>?]')),
+                                    _passwordController.text.contains(RegExp(r'[!@#$%^&*()_+\-=\[\]{};:,./<>?]')),
                                   ),
                                 ],
                               ),

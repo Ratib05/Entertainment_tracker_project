@@ -1,4 +1,4 @@
-import { IsInt, IsNotEmpty, IsOptional, IsUUID } from 'class-validator';
+import { IsInt, IsNotEmpty, IsOptional, IsUUID, Min } from 'class-validator';
 
 export class AddListItemDto {
   @IsUUID()
@@ -6,6 +6,7 @@ export class AddListItemDto {
   entertainment_id!: string;
 
   @IsInt()
+  @Min(0)
   @IsOptional()
   order_index?: number;
 }

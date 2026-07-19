@@ -1,15 +1,28 @@
 import { plainToInstance } from 'class-transformer';
-import { IsString, validateSync } from 'class-validator';
+import { IsOptional, IsString, validateSync } from 'class-validator';
 
 class EnvironmentVariables {
   @IsString()
   SUPABASE_URL!: string;
 
   @IsString()
-  SUPABASE_ANON_KEY!: string;
+  SUPABASE_SERVICE_ROLE_KEY!: string;
 
+  @IsOptional()
+  @IsString()
+  ADMIN_USER_IDS: string = '';
+
+  @IsOptional()
   @IsString()
   PORT: string = '3000';
+
+  @IsOptional()
+  @IsString()
+  NODE_ENV: string = 'development';
+
+  @IsOptional()
+  @IsString()
+  CORS_ORIGIN: string = '';
 }
 
 export function validate(config: Record<string, unknown>) {

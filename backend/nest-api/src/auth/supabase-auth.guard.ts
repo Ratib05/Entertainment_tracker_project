@@ -14,13 +14,12 @@ export class SupabaseAuthGuard implements CanActivate {
       throw new UnauthorizedException('Missing Bearer token');
     }
 
-    const token = authorization.split(' ')[1];
-    const user = await this.authService.validateAccessToken(token);
-
-    if (!user) {
-      throw new UnauthorizedException('Invalid authentication token');
+    const token = authorization.slice('Bearer '.length).trim();
+    if (!token) {
+      throw new UnauthorizedException('Missing Bearer token');
     }
 
+    const user = await this.authService.validateAccessToken(token);
     request.user = user;
     return true;
   }

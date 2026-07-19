@@ -10,6 +10,7 @@ import {
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
   private readonly logger = new Logger(AllExceptionsFilter.name);
+  private readonly isProduction = process.env.NODE_ENV === 'production';
 
   catch(exception: unknown, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
@@ -21,10 +22,20 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
     if (exception instanceof HttpException) {
       status = exception.getStatus();
-      message = exception.message;
+      const exceptionResponse = exception.getResponse();
+      message =
+        typeof exceptionResponse === 'string'
+          ? exceptionResponse
+          : ((exceptionResponse as { message?: string | string[] }).message as string) ??
+            exception.message;
+      if (Array.isArray(message)) {
+        message = message.join(', ');
+      }
     } else if (exception instanceof Error) {
       this.logger.error(`Unhandled error: ${exception.message}`, exception.stack);
-      message = exception.message;
+      if (!this.isProduction) {
+        message = exception.message;
+      }
     }
 
     response.status(status).json({

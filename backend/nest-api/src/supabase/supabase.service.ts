@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { createClient, SupabaseClient, User } from '@supabase/supabase-js';
 
 @Injectable()
@@ -8,16 +8,17 @@ export class SupabaseService {
 
   constructor() {
     const url = process.env.SUPABASE_URL;
-    const key = process.env.SUPABASE_ANON_KEY;
+    const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
     if (!url || !key) {
-      this.logger.error('Missing SUPABASE_URL or SUPABASE_ANON_KEY');
+      this.logger.error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');
       throw new Error('Supabase configuration is required');
     }
 
     this.client = createClient(url, key, {
       auth: {
         persistSession: false,
+        autoRefreshToken: false,
       },
     });
   }
@@ -29,11 +30,9 @@ export class SupabaseService {
   async getUserByAccessToken(token: string): Promise<User> {
     const { data, error } = await this.client.auth.getUser(token);
     if (error || !data?.user) {
-      const message = error?.message ?? 'Invalid access token';
-      this.logger.warn('Invalid access token', message);
-      throw new Error(message);
+      this.logger.warn('Invalid access token');
+      throw new UnauthorizedException('Invalid authentication token');
     }
     return data.user;
   }
 }
-

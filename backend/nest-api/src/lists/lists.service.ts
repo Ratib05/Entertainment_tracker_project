@@ -8,21 +8,26 @@ import { AddListItemDto } from './dto/add-list-item.dto';
 export class ListsService {
   constructor(private readonly supabaseService: SupabaseService) {}
 
-  async findAll(userId: string) {
-    const client = this.supabaseService.getClient();
+  // All per-user data access uses the user-scoped Supabase client so
+  // RLS policies on the database enforce who can read/write which
+  // rows. The `eq('user_id', userId)` filters are belt-and-braces;
+  // they MUST be kept in sync with the policy definitions in supabase/.
+
+  async findAll(userId: string, accessToken: string) {
+    const client = this.supabaseService.getUserClient(accessToken);
     const { data, error } = await client
       .from('lists')
-      .select('*, list_items(*, entertainment(*))')
+      .select('id, user_id, name, description, is_public, created_at, updated_at, list_items(id, list_id, entertainment_id, order_index, created_at, entertainment(id, title, media_type, cover_url))')
       .eq('user_id', userId);
-    if (error) throw new InternalServerErrorException(`Failed to fetch lists: ${error.message}`);
+    if (error) throw new InternalServerErrorException('Failed to fetch lists');
     return data;
   }
 
-  async findOne(userId: string, id: string) {
-    const client = this.supabaseService.getClient();
+  async findOne(userId: string, accessToken: string, id: string) {
+    const client = this.supabaseService.getUserClient(accessToken);
     const { data, error } = await client
       .from('lists')
-      .select('*, list_items(*, entertainment(*))')
+      .select('id, user_id, name, description, is_public, created_at, updated_at, list_items(id, list_id, entertainment_id, order_index, created_at, entertainment(id, title, media_type, cover_url))')
       .eq('user_id', userId)
       .eq('id', id)
       .single();
@@ -32,25 +37,25 @@ export class ListsService {
     return data;
   }
 
-  async create(userId: string, createListDto: CreateListDto) {
-    const client = this.supabaseService.getClient();
+  async create(userId: string, accessToken: string, createListDto: CreateListDto) {
+    const client = this.supabaseService.getUserClient(accessToken);
     const { data, error } = await client
       .from('lists')
       .insert({ ...createListDto, user_id: userId })
-      .select()
+      .select('id, user_id, name, description, is_public, created_at, updated_at')
       .single();
-    if (error) throw new InternalServerErrorException(`Failed to create list: ${error.message}`);
+    if (error) throw new InternalServerErrorException('Failed to create list');
     return data;
   }
 
-  async update(userId: string, id: string, updateListDto: UpdateListDto) {
-    const client = this.supabaseService.getClient();
+  async update(userId: string, accessToken: string, id: string, updateListDto: UpdateListDto) {
+    const client = this.supabaseService.getUserClient(accessToken);
     const { data, error } = await client
       .from('lists')
       .update(updateListDto)
       .eq('id', id)
       .eq('user_id', userId)
-      .select()
+      .select('id, user_id, name, description, is_public, created_at, updated_at')
       .single();
     if (error || !data) {
       throw new NotFoundException('List not found');
@@ -58,8 +63,8 @@ export class ListsService {
     return data;
   }
 
-  async remove(userId: string, id: string) {
-    const client = this.supabaseService.getClient();
+  async remove(userId: string, accessToken: string, id: string) {
+    const client = this.supabaseService.getUserClient(accessToken);
     const { error } = await client
       .from('lists')
       .delete()
@@ -69,8 +74,8 @@ export class ListsService {
     return { deleted: true };
   }
 
-  private async ensureListOwnedByUser(userId: string, listId: string) {
-    const client = this.supabaseService.getClient();
+  private async ensureListOwnedByUser(userId: string, accessToken: string, listId: string) {
+    const client = this.supabaseService.getUserClient(accessToken);
     const { data, error } = await client
       .from('lists')
       .select('id')
@@ -85,10 +90,10 @@ export class ListsService {
     return data;
   }
 
-  async addItem(userId: string, listId: string, addListItemDto: AddListItemDto) {
-    await this.ensureListOwnedByUser(userId, listId);
+  async addItem(userId: string, accessToken: string, listId: string, addListItemDto: AddListItemDto) {
+    await this.ensureListOwnedByUser(userId, accessToken, listId);
 
-    const client = this.supabaseService.getClient();
+    const client = this.supabaseService.getUserClient(accessToken);
     const { data, error } = await client
       .from('list_items')
       .insert({
@@ -96,15 +101,15 @@ export class ListsService {
         entertainment_id: addListItemDto.entertainment_id,
         order_index: addListItemDto.order_index ?? 0,
       })
-      .select();
-    if (error) throw new InternalServerErrorException(`Failed to add list item: ${error.message}`);
+      .select('id, list_id, entertainment_id, order_index, created_at');
+    if (error) throw new InternalServerErrorException('Failed to add list item');
     return data;
   }
 
-  async removeItem(userId: string, listId: string, entertainmentId: string) {
-    await this.ensureListOwnedByUser(userId, listId);
+  async removeItem(userId: string, accessToken: string, listId: string, entertainmentId: string) {
+    await this.ensureListOwnedByUser(userId, accessToken, listId);
 
-    const client = this.supabaseService.getClient();
+    const client = this.supabaseService.getUserClient(accessToken);
     const { error } = await client
       .from('list_items')
       .delete()

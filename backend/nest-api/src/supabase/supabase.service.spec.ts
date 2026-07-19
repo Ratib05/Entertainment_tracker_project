@@ -28,13 +28,19 @@ describe('SupabaseService', () => {
     delete process.env.SUPABASE_SERVICE_ROLE_KEY;
   });
 
-  it('should create a Supabase client and return it', () => {
-    const client = service.getClient();
-    expect(createClientMock).toHaveBeenCalledWith('http://localhost', 'test-service-role-key', {
-      auth: {
-        persistSession: false,
+  it('should create an admin client with service role key', () => {
+    const client = service.getAdminClient();
+    expect(createClientMock).toHaveBeenCalledWith('http://localhost', 'test-service-role-key', expect.any(Object));
+    expect(client).toEqual({ auth: { getUser: mockGetUser } });
+  });
+
+  it('should create a user client with JWT auth header', () => {
+    const client = service.getUserClient('test-jwt-token');
+    expect(createClientMock).toHaveBeenCalledWith('http://localhost', 'test-service-role-key', expect.objectContaining({
+      global: {
+        headers: { Authorization: 'Bearer test-jwt-token' },
       },
-    });
+    }));
     expect(client).toEqual({ auth: { getUser: mockGetUser } });
   });
 

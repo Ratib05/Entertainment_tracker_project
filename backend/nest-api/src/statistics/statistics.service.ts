@@ -6,8 +6,8 @@ import { WatchStatus } from '../common/enums/watch-status.enum';
 export class StatisticsService {
   constructor(private readonly supabaseService: SupabaseService) {}
 
-  async getLibraryStats(userId: string) {
-    const client = this.supabaseService.getClient();
+  async getLibraryStats(userId: string, accessToken: string) {
+    const client = this.supabaseService.getUserClient(accessToken);
     const { data, error } = await client
       .from('user_library')
       .select('status')
@@ -25,8 +25,8 @@ export class StatisticsService {
     return stats;
   }
 
-  async getReviewStats(userId: string) {
-    const client = this.supabaseService.getClient();
+  async getReviewStats(userId: string, accessToken: string) {
+    const client = this.supabaseService.getUserClient(accessToken);
     const { data, error } = await client
       .from('reviews')
       .select('rating')

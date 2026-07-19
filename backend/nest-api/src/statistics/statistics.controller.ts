@@ -1,6 +1,6 @@
 import { Controller, Get } from '@nestjs/common';
 import { StatisticsService } from './statistics.service';
-import { CurrentUser } from '../auth/current-user.decorator';
+import { CurrentUser, CurrentAccessToken } from '../auth/current-user.decorator';
 import { UseGuards } from '@nestjs/common';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 
@@ -10,12 +10,12 @@ export class StatisticsController {
   constructor(private readonly statisticsService: StatisticsService) {}
 
   @Get('library')
-  getLibraryStats(@CurrentUser() user: { id: string }) {
-    return this.statisticsService.getLibraryStats(user.id);
+  getLibraryStats(@CurrentUser() user: { id: string }, @CurrentAccessToken() accessToken: string) {
+    return this.statisticsService.getLibraryStats(user.id, accessToken);
   }
 
   @Get('reviews')
-  getReviewStats(@CurrentUser() user: { id: string }) {
-    return this.statisticsService.getReviewStats(user.id);
+  getReviewStats(@CurrentUser() user: { id: string }, @CurrentAccessToken() accessToken: string) {
+    return this.statisticsService.getReviewStats(user.id, accessToken);
   }
 }

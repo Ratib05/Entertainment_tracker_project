@@ -21,6 +21,9 @@ export class SupabaseAuthGuard implements CanActivate {
 
     const user = await this.authService.validateAccessToken(token);
     request.user = user;
+    // Stash the raw token so services can build a user-scoped Supabase
+    // client (which keeps RLS in play).
+    (request as Request & { accessToken?: string }).accessToken = token;
     return true;
   }
 }

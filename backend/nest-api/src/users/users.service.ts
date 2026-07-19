@@ -6,8 +6,8 @@ import { UpdateUserDto } from './dto/update-user.dto';
 export class UsersService {
   constructor(private readonly supabaseService: SupabaseService) {}
 
-  async findOne(userId: string) {
-    const client = this.supabaseService.getClient();
+  async findOne(userId: string, accessToken: string) {
+    const client = this.supabaseService.getUserClient(accessToken);
     const { data, error } = await client
       .from('users')
       .select('id, email, username, avatar_url, created_at')
@@ -19,13 +19,13 @@ export class UsersService {
     return data;
   }
 
-  async update(userId: string, updateUserDto: UpdateUserDto) {
-    const client = this.supabaseService.getClient();
+  async update(userId: string, accessToken: string, updateUserDto: UpdateUserDto) {
+    const client = this.supabaseService.getUserClient(accessToken);
     const { data, error } = await client
       .from('users')
       .update(updateUserDto)
       .eq('id', userId)
-      .select()
+      .select('id, email, username, avatar_url, created_at')
       .single();
     if (error || !data) {
       throw new NotFoundException('User not found');

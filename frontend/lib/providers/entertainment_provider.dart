@@ -22,7 +22,7 @@ class EntertainmentProvider extends ChangeNotifier {
 
     try {
       final response = await _apiService.getAllEntertainment();
-      _entertainments = (response as List).cast<Map<String, dynamic>>()
+      _entertainments = response
           .map((item) => Entertainment.fromJson(item))
           .toList();
     } catch (e) {

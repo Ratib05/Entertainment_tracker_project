@@ -9,7 +9,7 @@ class PasswordPolicy {
   static bool hasUppercase(String password) => password.contains(RegExp(r'[A-Z]'));
   static bool hasNumber(String password) => password.contains(RegExp(r'[0-9]'));
   static bool hasSpecialChar(String password) =>
-      password.contains(RegExp(r'[!@#$%^&*()_+\-=\[\]{};:\'",.<>?]'));
+      password.contains(RegExp(r"[!@#$%^&*()_+\-=\[\]{};:',.<>?]"));
 
   static bool isValid(String password) =>
       hasMinLength(password) &&

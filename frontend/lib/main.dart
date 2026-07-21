@@ -3,10 +3,11 @@ import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'screens/login_screen.dart';
-import 'theme/app_theme.dart';
+import 'screens/tracker_shell.dart';
 import 'services/api_service.dart';
 import 'providers/auth_provider.dart';
 import 'providers/entertainment_provider.dart';
+import 'providers/theme_provider.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -40,12 +41,20 @@ class ReelLogApp extends StatelessWidget {
           create: (context) => EntertainmentProvider(apiService),
           update: (context, authProvider, previous) => EntertainmentProvider(apiService),
         ),
+        ChangeNotifierProvider(create: (_) => ThemeProvider()),
       ],
-      child: MaterialApp(
-        title: 'Entertainment tracker',
-        debugShowCheckedModeBanner: false,
-        theme: AppTheme.light(),
-        home: const LoginScreen(),
+      child: Consumer<ThemeProvider>(
+        builder: (context, themeProvider, _) {
+          return MaterialApp(
+            title: 'Entertainment tracker',
+            debugShowCheckedModeBanner: false,
+            theme: themeProvider.themeData,
+            home: const LoginScreen(),
+            routes: {
+              '/tracker': (context) => const TrackerShell(),
+            },
+          );
+        },
       ),
     );
   }

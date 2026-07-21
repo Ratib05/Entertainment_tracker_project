@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../data/memory_library_repository.dart';
 import '../models/media_entry.dart';
 import '../models/tracker_mode.dart';
+import '../providers/theme_provider.dart';
 import '../widgets/add_media_sheet.dart';
 import 'games_screen.dart';
 import 'movies_screen.dart';
@@ -145,6 +147,7 @@ class _TrackerShellState extends State<TrackerShell> {
           ? TrackerMode.games
           : TrackerMode.movies;
     });
+    context.read<ThemeProvider>().setMode(_mode);
   }
 
   @override
@@ -172,8 +175,8 @@ class _TrackerShellState extends State<TrackerShell> {
       // ========== BOTTOM APP BAR ==========
       // Provides mode toggle button and mode description
       bottomNavigationBar: BottomAppBar(
-        // Different background color based on mode (light for games, dark for movies)
-        color: isGameMode ? const Color(0xFFF4EEE5) : Colors.black,
+        // Different background color based on mode
+        color: isGameMode ? const Color(0xFFD9D9D9) : const Color(0xFF353535),
         elevation: 0,
         height: 88,
         padding: EdgeInsets.zero,
@@ -195,22 +198,22 @@ class _TrackerShellState extends State<TrackerShell> {
                   decoration: BoxDecoration(
                     // Different colors for each mode
                     color: isGameMode
-                        ? Colors.blue.shade600 // Show "Switch to movies" button in blue
-                        : Colors.green.shade600, // Show "Switch to games" button in green
+                        ? const Color(0xFF284B63) // Yale Blue for switch to movies
+                        : const Color(0xFFBCE7FD), // Icy Blue for switch to games
                     borderRadius: BorderRadius.circular(12),
                   ),
                   alignment: Alignment.center,
                   child: Icon(
                     // Icon indicates the OTHER mode (what you'll switch to)
                     isGameMode ? Icons.local_movies : Icons.sports_esports,
-                    color: Colors.white,
+                    color: isGameMode ? const Color(0xFFD9D9D9) : const Color(0xFF353535),
                     size: 26,
                   ),
                 ),
               ),
-              
+
               const SizedBox(width: 16),
-              
+
               // ========== MODE DESCRIPTION TEXT ==========
               // Explain what the button does
               Expanded(
@@ -222,7 +225,7 @@ class _TrackerShellState extends State<TrackerShell> {
                         : 'Tap to show games in your tracker.',
                     style: theme.textTheme.bodySmall?.copyWith(
                       color:
-                          isGameMode ? Colors.black87 : Colors.grey.shade500,
+                          isGameMode ? const Color(0xFF9EB7B8) : const Color(0xFF353535),
                     ),
                   ),
                 ),

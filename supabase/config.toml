@@ -19,7 +19,4 @@ secret = "08f56b4b-b4a3-4d5d-bd7a-68b34c353207"
 
 [auth]
 enabled = true
-email_max_frequency = "1s"
-email_autoconfirm = true
-external_email_disabled = false
-mailer_autoconfirm = true
+autoconfirm = true

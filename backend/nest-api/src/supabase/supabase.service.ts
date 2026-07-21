@@ -123,11 +123,27 @@ export class SupabaseService {
    * signature before any RLS-scoped client can be created.
    */
   async getUserByAccessToken(token: string): Promise<User> {
-    const { data, error } = await this.adminClient.auth.getUser(token);
-    if (error || !data?.user) {
-      this.logger.warn('Invalid access token');
+    try {
+      // Create a temporary client with the token to validate it
+      const clientWithToken = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_ANON_KEY!, {
+        global: {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+        auth: {
+          persistSession: false,
+          autoRefreshToken: false,
+        },
+      });
+
+      const { data, error } = await clientWithToken.auth.getUser();
+      if (error || !data?.user) {
+        this.logger.warn('Invalid access token');
+        throw new UnauthorizedException('Invalid authentication token');
+      }
+      return data.user;
+    } catch (err) {
+      this.logger.warn('Token validation error:', err);
       throw new UnauthorizedException('Invalid authentication token');
     }
-    return data.user;
   }
 }

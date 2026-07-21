@@ -1,9 +1,11 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import { SupabaseUser } from './supabase-user.interface';
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(private readonly supabaseService: SupabaseService) {}
 
   /**
@@ -20,23 +22,25 @@ export class AuthService {
     // The insert is constrained by `id = user.id` so it can only ever
     // affect the calling user's own row.
     const adminClient = this.supabaseService.getAdminClient();
-    const { data: existingUser, error: profileError } = await adminClient
-      .from('users')
-      .select('id, email, username, avatar_url')
-      .eq('id', user.id)
-      .single();
+    try {
+      const { data: existingProfile, error: profileError } = await adminClient
+        .from('profiles')
+        .select('id, email, username, avatar_url')
+        .eq('id', user.id)
+        .single();
 
-    if (profileError && profileError.code !== 'PGRST116') {
-      throw new UnauthorizedException('Unable to load user profile');
-    }
-
-    if (!existingUser) {
-      await adminClient.from('users').insert({
-        id: user.id,
-        email: user.email,
-        username: user.user_metadata?.username,
-        avatar_url: user.user_metadata?.avatar_url,
-      });
+      if (profileError && profileError.code !== 'PGRST116') {
+        this.logger.warn(`Profile query error: ${profileError.code}`);
+      } else if (!existingProfile) {
+        await adminClient.from('profiles').insert({
+          id: user.id,
+          email: user.email,
+          username: user.user_metadata?.username,
+          avatar_url: user.user_metadata?.avatar_url,
+        });
+      }
+    } catch (err) {
+      this.logger.warn('Profile bootstrap failed:', err);
     }
 
     return {
@@ -56,15 +60,15 @@ export class AuthService {
   async getProfile(userId: string, accessToken: string) {
     const client = this.supabaseService.getUserClient(accessToken);
     const { data, error } = await client
-      .from('users')
+      .from('profiles')
       .select('id, email, username, avatar_url, created_at')
       .eq('id', userId)
       .single();
 
-    if (error) {
+    if (error && error.code !== 'PGRST116' && error.code !== 'PGRST205') {
       throw new UnauthorizedException('Unable to load profile');
     }
 
-    return data;
+    return data || { id: userId };
   }
 }

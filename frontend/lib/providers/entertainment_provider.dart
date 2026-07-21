@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/entertainment.dart';
-import '../models/media_type.dart';
+import '../models/media_entry.dart';
 import '../services/api_service.dart';
 
 class EntertainmentProvider extends ChangeNotifier {

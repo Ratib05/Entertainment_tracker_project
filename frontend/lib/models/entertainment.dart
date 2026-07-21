@@ -1,4 +1,4 @@
-import 'media_type.dart';
+import 'media_entry.dart';
 
 class Entertainment {
   final String? id;

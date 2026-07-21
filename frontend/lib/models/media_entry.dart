@@ -4,7 +4,21 @@ import 'package:flutter/material.dart';
 /// - film: Movies (typically 2-3 hours)
 /// - show: TV series (multiple seasons/episodes)
 /// - game: Video games
-enum MediaType { film, show, game }
+enum MediaType {
+  film('film'),
+  show('show'),
+  game('game');
+
+  final String value;
+  const MediaType(this.value);
+
+  static MediaType fromString(String value) {
+    return MediaType.values.firstWhere(
+      (e) => e.value == value,
+      orElse: () => throw ArgumentError('Unknown MediaType: $value'),
+    );
+  }
+}
 
 /// WatchStatus represents the viewing/playing progress of a media item.
 /// - watchlist: Added but not started yet

@@ -8,6 +8,9 @@ class EnvironmentVariables {
   @IsString()
   SUPABASE_SERVICE_ROLE_KEY!: string;
 
+  @IsString()
+  SUPABASE_ANON_KEY!: string;
+
   @IsOptional()
   @IsString()
   ADMIN_USER_IDS: string = '';

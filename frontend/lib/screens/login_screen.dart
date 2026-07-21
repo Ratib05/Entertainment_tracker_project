@@ -207,7 +207,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     if (_showSignUp) ...[
                       const SizedBox(height: 16),
-                      Consumer<AuthProvider>(builder: (context, _, __) {
+                      Consumer<AuthProvider>(builder: (context, _, _) {
                         return SizedBox(
                           height: 100,
                           child: SingleChildScrollView(

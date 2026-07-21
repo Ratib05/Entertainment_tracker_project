@@ -37,18 +37,18 @@ class GamesScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    // Use green as the accent color for games (different from movies' purple)
-    final accent = Colors.green.shade600;
+    // Game mode: Pumpkin Spice accent color
+    final accent = const Color(0xFFF96900);
 
     return Scaffold(
-      // Light beige background (contrasts with dark movies screen)
-      backgroundColor: const Color(0xFFF4EEE5),
-      
+      // Game mode: Beige background
+      backgroundColor: const Color(0xFFDCE2C8),
+
       // ========== APP BAR ==========
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF4EEE5),
+        backgroundColor: const Color(0xFFDCE2C8),
         foregroundColor: Colors.black,
-        surfaceTintColor: const Color(0xFFF4EEE5),
+        surfaceTintColor: const Color(0xFFDCE2C8),
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -136,8 +136,8 @@ class _GamesStatsCard extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Card(
-      // Light tan/beige card background
-      color: const Color(0xFFEBE0DC),
+      // Game mode: Pearl Aqua card background
+      color: const Color(0xFFA8DCD1),
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -258,14 +258,14 @@ class _GamesEmptyState extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(32),
               decoration: BoxDecoration(
-                // Use green with low opacity
-                color: Colors.green.shade600.withValues(alpha: 0.12),
+                // Game mode: Pumpkin Spice with low opacity
+                color: const Color(0xFFF96900).withValues(alpha: 0.12),
                 shape: BoxShape.circle,
               ),
-              child: Icon(
+              child: const Icon(
                 Icons.sports_esports_outlined,
                 size: 40,
-                color: Colors.green.shade600,
+                color: Color(0xFFF96900), // Pumpkin Spice
               ),
             ),
             

@@ -83,10 +83,10 @@ class MediaTile extends StatelessWidget {
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                       colors: entry.type == MediaType.film
-                          ? [const Color(0xFF9333EA), const Color(0xFF581C87)] // Purple
+                          ? [const Color(0xFF9333EA), const Color(0xFF581C87)] // Original purple
                           : entry.type == MediaType.show
-                              ? [const Color(0xFF2563EB), const Color(0xFF1E3A8A)] // Blue
-                              : [const Color(0xFF0F766E), const Color(0xFF134E4A)], // Teal
+                              ? [const Color(0xFF2563EB), const Color(0xFF1E3A8A)] // Original blue
+                              : [const Color(0xFF0F766E), const Color(0xFF134E4A)], // Original teal
                     ),
                     borderRadius: BorderRadius.circular(10),
                   ),
@@ -125,10 +125,10 @@ class MediaTile extends StatelessWidget {
                           _Badge(
                             label: entry.type.label,
                             color: entry.type == MediaType.film
-                                ? const Color(0xFF9333EA)
+                                ? const Color(0xFF9333EA) // Original purple
                                 : entry.type == MediaType.show
                                     ? const Color(0xFF2563EB)
-                                    : const Color(0xFF14B8A6),
+                                    : const Color(0xFF14B8A6), // Original teal
                           ),
                           
                           // Status badge (Watchlist/Watching/Watched)

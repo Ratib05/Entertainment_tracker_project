@@ -22,8 +22,8 @@ class EntertainmentProvider extends ChangeNotifier {
 
     try {
       final response = await _apiService.getAllEntertainment();
-      _entertainments = (response as List)
-          .map((item) => Entertainment.fromJson(item as Map<String, dynamic>))
+      _entertainments = (response as List).cast<Map<String, dynamic>>()
+          .map((item) => Entertainment.fromJson(item))
           .toList();
     } catch (e) {
       _error = e.toString();
@@ -62,7 +62,7 @@ class EntertainmentProvider extends ChangeNotifier {
       );
 
       final response = await _apiService.createEntertainment(newItem.toJson());
-      final created = Entertainment.fromJson(response as Map<String, dynamic>);
+      final created = Entertainment.fromJson(response);
       _entertainments.add(created);
     } catch (e) {
       _error = e.toString();
@@ -100,7 +100,7 @@ class EntertainmentProvider extends ChangeNotifier {
       if (rating != null) data['rating'] = rating;
 
       final response = await _apiService.updateEntertainment(id, data);
-      final updated = Entertainment.fromJson(response as Map<String, dynamic>);
+      final updated = Entertainment.fromJson(response);
 
       final index = _entertainments.indexWhere((item) => item.id == id);
       if (index != -1) {

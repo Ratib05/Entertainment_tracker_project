@@ -29,18 +29,18 @@ class MoviesScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    // Get the primary color from the theme's color scheme
-    final accent = theme.colorScheme.primary;
+    // Movie mode: Rosewood accent color
+    final accent = const Color(0xFFB9314F);
 
     return Scaffold(
-      // Dark background color
-      backgroundColor: Colors.black,
-      
+      // Movie mode: Granite background
+      backgroundColor: const Color(0xFF3A4F41),
+
       // ========== APP BAR ==========
       appBar: AppBar(
-        backgroundColor: Colors.black,
+        backgroundColor: const Color(0xFF3A4F41),
         foregroundColor: Colors.white,
-        surfaceTintColor: Colors.black,
+        surfaceTintColor: const Color(0xFF3A4F41),
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -130,8 +130,8 @@ class _MoviesStatsCard extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Card(
-      // Dark card background
-      color: const Color(0xFF11131A),
+      // Movie mode: Rosy Taupe card background with Granite overlay
+      color: const Color(0xFF4A5F57),
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(

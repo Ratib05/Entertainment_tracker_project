@@ -55,35 +55,49 @@ class _TrackerShellState extends State<TrackerShell> {
     final size = overlayBox.size;
     final accent = Theme.of(context).colorScheme.primary;
 
+    // Anchored right at the FAB's position (just above the 88dp bottom bar)
+    // with almost no room reserved below, so the menu is forced to grow
+    // upward from the button instead of dropping down over it.
+    const menuWidth = 150.0;
+    const itemHeight = 64.0;
+
     final choice = await showMenu<_FabChoice>(
       context: context,
       color: const Color(0xFF1A1A22),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       position: RelativeRect.fromLTRB(
-        size.width - 210,
-        size.height - 260,
-        16,
-        100,
+        size.width - menuWidth - 20,
+        size.height - 160,
+        20,
+        104,
       ),
       items: [
         PopupMenuItem(
           value: _FabChoice.discover,
-          child: Row(
-            children: [
-              Icon(Icons.explore_outlined, color: accent, size: 20),
-              const SizedBox(width: 12),
-              const Text('Discover', style: TextStyle(color: Colors.white)),
-            ],
+          height: itemHeight,
+          child: SizedBox(
+            width: menuWidth,
+            child: Row(
+              children: [
+                Icon(Icons.explore_outlined, color: accent, size: 20),
+                const SizedBox(width: 12),
+                const Text('Discover', style: TextStyle(color: Colors.white)),
+              ],
+            ),
           ),
         ),
         PopupMenuItem(
           value: _FabChoice.addTitle,
-          child: Row(
-            children: [
-              Icon(Icons.add_circle_outline, color: accent, size: 20),
-              const SizedBox(width: 12),
-              const Text('Add a title', style: TextStyle(color: Colors.white)),
-            ],
+          height: itemHeight,
+          child: SizedBox(
+            width: menuWidth,
+            child: Row(
+              children: [
+                Icon(Icons.add_circle_outline, color: accent, size: 20),
+                const SizedBox(width: 12),
+                const Text('Add a title', style: TextStyle(color: Colors.white)),
+              ],
+            ),
           ),
         ),
       ],
@@ -166,12 +180,15 @@ class _TrackerShellState extends State<TrackerShell> {
           episodeRuntimeMinutes: result['episodeRuntimeMinutes'] as int?,
           numberOfEpisodes: result['numberOfEpisodes'] as int?,
           numberOfSeasons: result['numberOfSeasons'] as int?,
+          seasonEpisodeCount: result['seasonEpisodeCount'] as int?,
+          lastWatchedMinutes: result['lastWatchedMinutes'] as int?,
           clearRating: result['rating'] == null,
           clearSeason: result['season'] == null,
           clearWatchedDate: result['watchedDate'] == null,
           clearPosterUrl: result['posterUrl'] == null,
           clearYear: result['year'] == null,
           clearTmdbId: result['tmdbId'] == null,
+          clearLastWatchedMinutes: result['lastWatchedMinutes'] == null,
         ),
       );
     });
@@ -201,6 +218,8 @@ class _TrackerShellState extends State<TrackerShell> {
           episodeRuntimeMinutes: result['episodeRuntimeMinutes'] as int?,
           numberOfEpisodes: result['numberOfEpisodes'] as int?,
           numberOfSeasons: result['numberOfSeasons'] as int?,
+          seasonEpisodeCount: result['seasonEpisodeCount'] as int?,
+          lastWatchedMinutes: result['lastWatchedMinutes'] as int?,
         ),
       );
     });

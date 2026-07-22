@@ -26,6 +26,7 @@ class _AddMediaSheetState extends State<AddMediaSheet> {
   late final TextEditingController _titleController;
   late final TextEditingController _noteController;
   late final TextEditingController _seasonController;
+  late final TextEditingController _lastWatchedController;
   late MediaType _type;
   late WatchStatus _status;
   int? _rating;
@@ -40,6 +41,10 @@ class _AddMediaSheetState extends State<AddMediaSheet> {
   String? _searchError;
   bool _pickedFromSearch = false;
   bool _saving = false;
+
+  // "Where to watch" data for watchlisted items.
+  WatchProviders? _watchProviders;
+  bool _loadingWatchProviders = false;
 
   // Real per-season episode counts from TMDB, populated as soon as a show
   // is picked (or on init when editing an existing show entry).
@@ -64,6 +69,9 @@ class _AddMediaSheetState extends State<AddMediaSheet> {
     _seasonController = TextEditingController(
       text: entry?.season?.toString() ?? '',
     );
+    _lastWatchedController = TextEditingController(
+      text: entry?.lastWatchedMinutes?.toString() ?? '',
+    );
     _type = entry?.type ?? (_isGamesMode ? MediaType.game : MediaType.film);
     if (!_allowedTypes.contains(_type)) {
       _type = _allowedTypes.first;
@@ -77,6 +85,27 @@ class _AddMediaSheetState extends State<AddMediaSheet> {
 
     if (_type == MediaType.show && _tmdbId != null) {
       _loadSeasons(_tmdbId!, preferredSeason: entry?.season);
+    }
+    if (_tmdbId != null && !_isGamesMode) {
+      _loadWatchProviders(_tmdbId!, _type);
+    }
+  }
+
+  Future<void> _loadWatchProviders(int tmdbId, MediaType type) async {
+    setState(() => _loadingWatchProviders = true);
+    try {
+      final providers = await _entertainmentApi.watchProviders(tmdbId, type);
+      if (!mounted) return;
+      setState(() {
+        _watchProviders = providers;
+        _loadingWatchProviders = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _watchProviders = null;
+        _loadingWatchProviders = false;
+      });
     }
   }
 
@@ -120,6 +149,7 @@ class _AddMediaSheetState extends State<AddMediaSheet> {
     _titleController.dispose();
     _noteController.dispose();
     _seasonController.dispose();
+    _lastWatchedController.dispose();
     super.dispose();
   }
 
@@ -194,23 +224,37 @@ class _AddMediaSheetState extends State<AddMediaSheet> {
       _cachedImport = null;
     });
 
+    final pickedType = result.type == MediaSearchType.show ? MediaType.show : MediaType.film;
+
     if (result.type == MediaSearchType.show) {
       _loadSeasons(result.tmdbId);
     }
+    _loadWatchProviders(result.tmdbId, pickedType);
   }
 
   Future<void> _submit() async {
     final title = _titleController.text.trim();
     if (title.isEmpty) return;
 
-    final seasonText = _seasonController.text.trim();
-    final season = seasonText.isEmpty ? null : int.tryParse(seasonText);
+    final manualSeasonText = _seasonController.text.trim();
+    final manualSeason = manualSeasonText.isEmpty ? null : int.tryParse(manualSeasonText);
+
+    final usingSeasonDropdown = _type == MediaType.show && _tmdbId != null;
+    final season = usingSeasonDropdown ? _selectedSeason : manualSeason;
+
+    final lastWatchedText = _lastWatchedController.text.trim();
+    final lastWatchedMinutes =
+        _status == WatchStatus.watching && lastWatchedText.isNotEmpty
+            ? int.tryParse(lastWatchedText)
+            : null;
 
     // Sync to the shared backend catalog to pull real runtime/genre data.
-    // Best-effort: if it fails, the entry is still logged with estimates.
-    Map<String, dynamic>? imported;
+    // Reuse the season-fetch's import response when we already have it
+    // (avoids a duplicate network round-trip). Best-effort: if this fails,
+    // the entry is still logged with estimates.
+    Map<String, dynamic>? imported = _cachedImport;
     final tmdbId = _tmdbId;
-    if (tmdbId != null) {
+    if (imported == null && tmdbId != null) {
       setState(() => _saving = true);
       try {
         imported = await _entertainmentApi.import(tmdbId, _type);
@@ -220,6 +264,13 @@ class _AddMediaSheetState extends State<AddMediaSheet> {
       if (!mounted) return;
       setState(() => _saving = false);
     }
+
+    final seasonEpisodeCount = season == null
+        ? null
+        : _seasons
+            .cast<Map<String, dynamic>?>()
+            .firstWhere((s) => s?['season_number'] == season, orElse: () => null)?['episode_count']
+            as int?;
 
     if (!mounted) return;
     Navigator.pop(context, {
@@ -238,6 +289,8 @@ class _AddMediaSheetState extends State<AddMediaSheet> {
       'episodeRuntimeMinutes': imported?['episode_runtime_minutes'] as int?,
       'numberOfEpisodes': imported?['number_of_episodes'] as int?,
       'numberOfSeasons': imported?['number_of_seasons'] as int?,
+      'seasonEpisodeCount': seasonEpisodeCount,
+      'lastWatchedMinutes': lastWatchedMinutes,
     });
   }
 
@@ -566,6 +619,31 @@ class _AddMediaSheetState extends State<AddMediaSheet> {
                 setState(() => _status = selection.first);
               },
             ),
+            if (_status == WatchStatus.watching && !_isGamesMode) ...[
+              const SizedBox(height: 12),
+              TextField(
+                controller: _lastWatchedController,
+                keyboardType: TextInputType.number,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                style: const TextStyle(color: Colors.white),
+                decoration: const InputDecoration(
+                  labelText: 'Timestamp',
+                  prefixIcon: Icon(Icons.schedule_outlined),
+                ),
+              ),
+            ],
+            if (!_isGamesMode) ...[
+              const SizedBox(height: 16),
+              Text(
+                'Where to Watch',
+                style: theme.textTheme.labelLarge?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey.shade300,
+                ),
+              ),
+              const SizedBox(height: 8),
+              _buildWhereToWatch(theme),
+            ],
             const SizedBox(height: 16),
             Text(
               'Rating',
@@ -634,6 +712,70 @@ class _AddMediaSheetState extends State<AddMediaSheet> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildWhereToWatch(ThemeData theme) {
+    if (_loadingWatchProviders) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 8),
+        child: SizedBox(
+          height: 20,
+          width: 20,
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+      );
+    }
+
+    final providers = _watchProviders;
+    if (providers == null || providers.isEmpty) {
+      return Text(
+        _tmdbId == null
+            ? 'Pick a title from search to see where to watch it.'
+            : 'No streaming, rental, or purchase options found.',
+        style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey.shade500),
+      );
+    }
+
+    Widget buildGroup(String label, List<String> names) {
+      if (names.isEmpty) return const SizedBox.shrink();
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label,
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: Colors.grey.shade500,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: names.map((name) {
+                return Chip(
+                  label: Text(name, style: const TextStyle(fontSize: 12)),
+                  backgroundColor: const Color(0xFF1A1A22),
+                  side: BorderSide(color: Colors.grey.shade800),
+                  visualDensity: VisualDensity.compact,
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                );
+              }).toList(),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        buildGroup('Stream', providers.flatrate),
+        buildGroup('Rent', providers.rent),
+        buildGroup('Buy', providers.buy),
+      ],
     );
   }
 }

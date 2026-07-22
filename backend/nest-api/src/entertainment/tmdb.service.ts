@@ -43,6 +43,18 @@ interface TmdbGenreListResponse {
   genres: Array<{ id: number; name: string }>;
 }
 
+interface TmdbWatchProvidersResponse {
+  results: Record<
+    string,
+    {
+      link: string;
+      flatrate?: Array<{ provider_name: string; logo_path: string }>;
+      rent?: Array<{ provider_name: string; logo_path: string }>;
+      buy?: Array<{ provider_name: string; logo_path: string }>;
+    }
+  >;
+}
+
 @Injectable()
 export class TmdbService {
   private readonly baseUrl = 'https://api.themoviedb.org/3';
@@ -327,6 +339,43 @@ export class TmdbService {
       const status_message = error.response?.data?.status_message;
       throw new InternalServerErrorException(
         `Failed to fetch TMDB recommendations: ${status_message ?? error.message}`,
+      );
+    }
+  }
+
+  // "Where to watch" data (streaming/rent/buy), sourced from TMDB's
+  // JustWatch-backed watch/providers endpoint, region-scoped.
+  async getWatchProviders(
+    tmdbId: string,
+    type: MediaType,
+    region: string = 'US',
+  ): Promise<{ link: string | null; flatrate: string[]; rent: string[]; buy: string[] }> {
+    const { headers, params } = this.requestConfig;
+    const path = type === MediaType.Show ? `/tv/${tmdbId}/watch/providers` : `/movie/${tmdbId}/watch/providers`;
+
+    try {
+      const response = await firstValueFrom(
+        this.httpService.get<TmdbWatchProvidersResponse>(`${this.baseUrl}${path}`, {
+          headers,
+          params,
+        }),
+      );
+
+      const regionData = response.data.results[region];
+      if (!regionData) {
+        return { link: null, flatrate: [], rent: [], buy: [] };
+      }
+
+      return {
+        link: regionData.link ?? null,
+        flatrate: (regionData.flatrate ?? []).map((p) => p.provider_name),
+        rent: (regionData.rent ?? []).map((p) => p.provider_name),
+        buy: (regionData.buy ?? []).map((p) => p.provider_name),
+      };
+    } catch (error: any) {
+      const status_message = error.response?.data?.status_message;
+      throw new InternalServerErrorException(
+        `Failed to fetch watch providers from TMDB: ${status_message ?? error.message}`,
       );
     }
   }

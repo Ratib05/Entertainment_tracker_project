@@ -138,4 +138,42 @@ class EntertainmentApiService {
 
     return jsonDecode(response.body) as Map<String, dynamic>;
   }
+
+  /// Where a title can be streamed/rented/bought (US region), from TMDB's
+  /// JustWatch-backed data. Returns empty lists if nothing is available.
+  Future<WatchProviders> watchProviders(int tmdbId, MediaType type) async {
+    final typeParam = type == MediaType.show ? 'show' : 'film';
+    final uri = Uri.parse('$_backendUrl/entertainment/watch-providers/tmdb').replace(
+      queryParameters: {'tmdbId': '$tmdbId', 'type': typeParam},
+    );
+
+    final response = await _client.get(uri);
+    if (response.statusCode != 200) {
+      throw Exception('Failed to load watch providers (${response.statusCode})');
+    }
+
+    final json = jsonDecode(response.body) as Map<String, dynamic>;
+    return WatchProviders(
+      link: json['link'] as String?,
+      flatrate: (json['flatrate'] as List<dynamic>).cast<String>(),
+      rent: (json['rent'] as List<dynamic>).cast<String>(),
+      buy: (json['buy'] as List<dynamic>).cast<String>(),
+    );
+  }
+}
+
+class WatchProviders {
+  const WatchProviders({
+    required this.link,
+    required this.flatrate,
+    required this.rent,
+    required this.buy,
+  });
+
+  final String? link;
+  final List<String> flatrate;
+  final List<String> rent;
+  final List<String> buy;
+
+  bool get isEmpty => flatrate.isEmpty && rent.isEmpty && buy.isEmpty;
 }

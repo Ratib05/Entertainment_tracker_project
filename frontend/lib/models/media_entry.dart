@@ -37,6 +37,12 @@ class MediaEntry {
     this.posterUrl,
     this.year,
     this.tmdbId,
+    this.genres = const [],
+    this.runtimeMinutes,
+    this.episodeRuntimeMinutes,
+    this.numberOfEpisodes,
+    this.numberOfSeasons,
+    this.lastWatchedMinutes,
   });
 
   /// Unique identifier for this entry
@@ -60,6 +66,19 @@ class MediaEntry {
   final String? posterUrl;
   final int? year;
   final int? tmdbId;
+  /// Genre names from TMDB (populated when added via search).
+  final List<String> genres;
+  /// Real movie runtime in minutes, from TMDB (film only).
+  final int? runtimeMinutes;
+  /// Real average episode runtime in minutes, from TMDB (show only).
+  final int? episodeRuntimeMinutes;
+  /// Total episode count across the whole series, from TMDB (show only).
+  final int? numberOfEpisodes;
+  /// Total season count across the whole series, from TMDB (show only).
+  final int? numberOfSeasons;
+  /// How many minutes into the film/season the user has watched so far.
+  /// Only meaningful while status is [WatchStatus.watching].
+  final int? lastWatchedMinutes;
 
   /// copyWith creates a modified copy of this entry.
   /// This is useful for updating specific fields without recreating the entire object.
@@ -75,12 +94,19 @@ class MediaEntry {
     String? posterUrl,
     int? year,
     int? tmdbId,
+    List<String>? genres,
+    int? runtimeMinutes,
+    int? episodeRuntimeMinutes,
+    int? numberOfEpisodes,
+    int? numberOfSeasons,
+    int? lastWatchedMinutes,
     bool clearRating = false,
     bool clearSeason = false,
     bool clearWatchedDate = false,
     bool clearPosterUrl = false,
     bool clearYear = false,
     bool clearTmdbId = false,
+    bool clearLastWatchedMinutes = false,
   }) {
     return MediaEntry(
       id: id,
@@ -96,6 +122,14 @@ class MediaEntry {
       posterUrl: clearPosterUrl ? null : (posterUrl ?? this.posterUrl),
       year: clearYear ? null : (year ?? this.year),
       tmdbId: clearTmdbId ? null : (tmdbId ?? this.tmdbId),
+      genres: genres ?? this.genres,
+      runtimeMinutes: runtimeMinutes ?? this.runtimeMinutes,
+      episodeRuntimeMinutes: episodeRuntimeMinutes ?? this.episodeRuntimeMinutes,
+      numberOfEpisodes: numberOfEpisodes ?? this.numberOfEpisodes,
+      numberOfSeasons: numberOfSeasons ?? this.numberOfSeasons,
+      lastWatchedMinutes: clearLastWatchedMinutes
+          ? null
+          : (lastWatchedMinutes ?? this.lastWatchedMinutes),
     );
   }
 }
@@ -157,20 +191,31 @@ String formatShortDate(DateTime date) {
   return '${months[date.month - 1]} ${date.day}, ${date.year}';
 }
 
-/// Approximate watch time in minutes for films/shows.
-/// Film ≈ 2h. Show ≈ seasons × 10 episodes × 45m.
+/// Screen time in minutes for films/shows. Uses real TMDB runtime data when
+/// available (set on import); falls back to rough estimates for titles
+/// added manually without a TMDB match.
 extension MediaEntryScreenTimeX on MediaEntry {
-  static const int filmMinutes = 120;
-  static const int showEpisodesPerSeason = 10;
-  static const int showEpisodeMinutes = 45;
+  static const int fallbackFilmMinutes = 120;
+  static const int fallbackShowEpisodesPerSeason = 10;
+  static const int fallbackShowEpisodeMinutes = 45;
 
   int get approxScreenMinutes {
     switch (type) {
       case MediaType.film:
-        return filmMinutes;
+        return runtimeMinutes ?? fallbackFilmMinutes;
       case MediaType.show:
-        final seasons = season ?? 1;
-        return seasons * showEpisodesPerSeason * showEpisodeMinutes;
+        final seasonsWatched = season ?? 1;
+        final episodeMinutes = episodeRuntimeMinutes ?? fallbackShowEpisodeMinutes;
+
+        final totalEpisodes = numberOfEpisodes;
+        final totalSeasons = numberOfSeasons;
+        final episodesPerSeason = (totalEpisodes != null &&
+                totalSeasons != null &&
+                totalSeasons > 0)
+            ? (totalEpisodes / totalSeasons).round()
+            : fallbackShowEpisodesPerSeason;
+
+        return seasonsWatched * episodesPerSeason * episodeMinutes;
       case MediaType.game:
         return 0;
     }

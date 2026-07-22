@@ -23,6 +23,17 @@ export class EntertainmentService {
     return data;
   }
 
+  async findByExternalId(externalId: string, type: string) {
+    const client = this.supabaseService.getClient();
+    const { data } = await client
+      .from('entertainment')
+      .select('*')
+      .eq('external_id', externalId)
+      .eq('type', type)
+      .maybeSingle();
+    return data;
+  }
+
   async create(createEntertainmentDto: CreateEntertainmentDto) {
     const client = this.supabaseService.getClient();
     const { data, error } = await client.from('entertainment').insert(createEntertainmentDto).select().single();

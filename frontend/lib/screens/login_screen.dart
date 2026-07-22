@@ -27,18 +27,12 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
-<<<<<<< HEAD
 
     // Placeholder until NestJS auth is wired up.
     await Future<void>.delayed(const Duration(milliseconds: 600));
 
     if (!mounted) return;
 
-=======
-    await Future<void>.delayed(const Duration(milliseconds: 600));
-
-    if (!mounted) return;
->>>>>>> back-end_dev_v2
     setState(() => _isLoading = false);
 
     Navigator.of(context).pushReplacement(
@@ -69,7 +63,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      'Entertainment Tracker',
+                      'MediaMine',
                       textAlign: TextAlign.center,
                       style: theme.textTheme.headlineSmall?.copyWith(
                         fontWeight: FontWeight.bold,

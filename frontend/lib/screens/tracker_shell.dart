@@ -4,6 +4,7 @@ import '../data/memory_library_repository.dart';
 import '../models/media_entry.dart';
 import '../models/tracker_mode.dart';
 import '../widgets/add_media_sheet.dart';
+import 'discover_screen.dart';
 import 'games_screen.dart';
 import 'movies_screen.dart';
 
@@ -41,6 +42,70 @@ class _TrackerShellState extends State<TrackerShell> {
       _repository.getAll().where((e) => e.type == MediaType.game).toList();
 
   // ========== SHEET MANAGEMENT ==========
+  /// Handles the FAB tap. In movies mode, shows a small popup near the FAB
+  /// with a choice between browsing Discover and adding a title directly;
+  /// games mode has no Discover yet, so it opens the add sheet straight away.
+  Future<void> _handleFabPressed() async {
+    if (_mode == TrackerMode.games) {
+      await _showAddSheet();
+      return;
+    }
+
+    final overlayBox = Overlay.of(context).context.findRenderObject() as RenderBox;
+    final size = overlayBox.size;
+    final accent = Theme.of(context).colorScheme.primary;
+
+    final choice = await showMenu<_FabChoice>(
+      context: context,
+      color: const Color(0xFF1A1A22),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      position: RelativeRect.fromLTRB(
+        size.width - 210,
+        size.height - 260,
+        16,
+        100,
+      ),
+      items: [
+        PopupMenuItem(
+          value: _FabChoice.discover,
+          child: Row(
+            children: [
+              Icon(Icons.explore_outlined, color: accent, size: 20),
+              const SizedBox(width: 12),
+              const Text('Discover', style: TextStyle(color: Colors.white)),
+            ],
+          ),
+        ),
+        PopupMenuItem(
+          value: _FabChoice.addTitle,
+          child: Row(
+            children: [
+              Icon(Icons.add_circle_outline, color: accent, size: 20),
+              const SizedBox(width: 12),
+              const Text('Add a title', style: TextStyle(color: Colors.white)),
+            ],
+          ),
+        ),
+      ],
+    );
+
+    if (choice == null || !mounted) return;
+
+    switch (choice) {
+      case _FabChoice.discover:
+        await Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => DiscoverScreen(
+              libraryEntries: _repository.getAll(),
+              onAdd: _insertEntry,
+            ),
+          ),
+        );
+      case _FabChoice.addTitle:
+        await _showAddSheet();
+    }
+  }
+
   /// Opens the add sheet in modal bottom sheet.
   /// Returns the result from AddMediaSheet (map of form data).
   /// Creates a new entry if data is returned.
@@ -77,6 +142,11 @@ class _TrackerShellState extends State<TrackerShell> {
     // Exit if sheet was dismissed or not mounted anymore
     if (result == null || !mounted) return;
 
+    if (result['action'] == 'delete') {
+      _deleteEntry(entry.id);
+      return;
+    }
+
     // Update the existing entry with new data
     setState(() {
       _repository.update(
@@ -91,6 +161,11 @@ class _TrackerShellState extends State<TrackerShell> {
           posterUrl: result['posterUrl'] as String?,
           year: result['year'] as int?,
           tmdbId: result['tmdbId'] as int?,
+          genres: result['genres'] as List<String>?,
+          runtimeMinutes: result['runtimeMinutes'] as int?,
+          episodeRuntimeMinutes: result['episodeRuntimeMinutes'] as int?,
+          numberOfEpisodes: result['numberOfEpisodes'] as int?,
+          numberOfSeasons: result['numberOfSeasons'] as int?,
           clearRating: result['rating'] == null,
           clearSeason: result['season'] == null,
           clearWatchedDate: result['watchedDate'] == null,
@@ -121,6 +196,11 @@ class _TrackerShellState extends State<TrackerShell> {
           posterUrl: result['posterUrl'] as String?,
           year: result['year'] as int?,
           tmdbId: result['tmdbId'] as int?,
+          genres: result['genres'] as List<String>? ?? const [],
+          runtimeMinutes: result['runtimeMinutes'] as int?,
+          episodeRuntimeMinutes: result['episodeRuntimeMinutes'] as int?,
+          numberOfEpisodes: result['numberOfEpisodes'] as int?,
+          numberOfSeasons: result['numberOfSeasons'] as int?,
         ),
       );
     });
@@ -165,13 +245,13 @@ class _TrackerShellState extends State<TrackerShell> {
       body: isGameMode
           ? GamesScreen(
               entries: _gamesEntries,
-              onAdd: _showAddSheet,
+              onAdd: _handleFabPressed,
               onEdit: _showEditSheet,
               onDelete: _deleteEntry,
             )
           : MoviesScreen(
               entries: _moviesEntries,
-              onAdd: _showAddSheet,
+              onAdd: _handleFabPressed,
               onEdit: _showEditSheet,
               onDelete: _deleteEntry,
             ),
@@ -241,3 +321,5 @@ class _TrackerShellState extends State<TrackerShell> {
     );
   }
 }
+
+enum _FabChoice { discover, addTitle }

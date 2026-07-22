@@ -14,6 +14,11 @@ import { MediaType } from '../../common/enums/media-type.enum';
 
 export class CreateEntertainmentDto {
   @IsString()
+  @MaxLength(200)
+  @IsOptional()
+  external_id?: string;
+
+  @IsString()
   @IsNotEmpty()
   @MaxLength(500)
   title!: string;
@@ -56,4 +61,28 @@ export class CreateEntertainmentDto {
   @Max(10)
   @IsOptional()
   rating?: number;
+
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  runtime_minutes?: number;
+
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  episode_runtime_minutes?: number;
+
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  number_of_episodes?: number;
+
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  number_of_seasons?: number;
+
+  @IsArray()
+  @IsOptional()
+  seasons?: Array<{ season_number: number; episode_count: number; name: string }>;
 }

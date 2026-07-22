@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../data/tmdb_search_service.dart';
+import '../data/entertainment_api_service.dart';
 import '../models/media_entry.dart';
 import '../models/media_search_result.dart';
 import '../models/tracker_mode.dart';
@@ -33,12 +33,20 @@ class _AddMediaSheetState extends State<AddMediaSheet> {
   int? _year;
   int? _tmdbId;
 
-  final TmdbSearchService _tmdb = TmdbSearchService();
+  final EntertainmentApiService _entertainmentApi = EntertainmentApiService();
   Timer? _debounce;
   List<MediaSearchResult> _results = [];
   bool _searching = false;
   String? _searchError;
   bool _pickedFromSearch = false;
+  bool _saving = false;
+
+  // Real per-season episode counts from TMDB, populated as soon as a show
+  // is picked (or on init when editing an existing show entry).
+  List<Map<String, dynamic>> _seasons = [];
+  int? _selectedSeason;
+  bool _loadingSeasons = false;
+  Map<String, dynamic>? _cachedImport;
 
   bool get _isEditing => widget.entry != null;
   bool get _isGamesMode => widget.mode == TrackerMode.games;
@@ -66,6 +74,44 @@ class _AddMediaSheetState extends State<AddMediaSheet> {
     _year = entry?.year;
     _tmdbId = entry?.tmdbId;
     _pickedFromSearch = entry?.tmdbId != null;
+
+    if (_type == MediaType.show && _tmdbId != null) {
+      _loadSeasons(_tmdbId!, preferredSeason: entry?.season);
+    }
+  }
+
+  Future<void> _loadSeasons(int tmdbId, {int? preferredSeason}) async {
+    setState(() {
+      _loadingSeasons = true;
+      _seasons = [];
+      _selectedSeason = null;
+    });
+
+    try {
+      final imported = await _entertainmentApi.import(tmdbId, MediaType.show);
+      final seasons = ((imported['seasons'] as List<dynamic>?) ?? [])
+          .cast<Map<String, dynamic>>();
+      if (!mounted) return;
+
+      final hasPreferred =
+          preferredSeason != null && seasons.any((s) => s['season_number'] == preferredSeason);
+
+      setState(() {
+        _seasons = seasons;
+        _selectedSeason = seasons.isEmpty
+            ? null
+            : (hasPreferred ? preferredSeason : seasons.first['season_number'] as int);
+        _cachedImport = imported;
+        _loadingSeasons = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _seasons = [];
+        _selectedSeason = null;
+        _loadingSeasons = false;
+      });
+    }
   }
 
   @override
@@ -85,6 +131,9 @@ class _AddMediaSheetState extends State<AddMediaSheet> {
       _posterUrl = null;
       _year = null;
       _tmdbId = null;
+      _seasons = [];
+      _selectedSeason = null;
+      _cachedImport = null;
     });
 
     _debounce?.cancel();
@@ -96,17 +145,7 @@ class _AddMediaSheetState extends State<AddMediaSheet> {
   Future<void> _runSearch(String query) async {
     if (_isGamesMode) return;
 
-    if (!_tmdb.hasApiKey) {
-      setState(() {
-        _results = [];
-        _searching = false;
-        _searchError =
-            'Add a TMDb key: flutter run --dart-define=TMDB_API_KEY=your_key';
-      });
-      return;
-    }
-
-    if (query.trim().length < 2) {
+    if (query.trim().isEmpty) {
       setState(() {
         _results = [];
         _searching = false;
@@ -121,7 +160,7 @@ class _AddMediaSheetState extends State<AddMediaSheet> {
     });
 
     try {
-      final results = await _tmdb.search(query, _type);
+      final results = await _entertainmentApi.search(query, _type);
       if (!mounted || _titleController.text.trim() != query.trim()) return;
       setState(() {
         _results = results;
@@ -132,7 +171,7 @@ class _AddMediaSheetState extends State<AddMediaSheet> {
       setState(() {
         _results = [];
         _searching = false;
-        _searchError = 'Search failed. Check your connection and API key.';
+        _searchError = 'Search failed. Check your connection and try again.';
       });
     }
   }
@@ -152,16 +191,37 @@ class _AddMediaSheetState extends State<AddMediaSheet> {
       _pickedFromSearch = true;
       _results = [];
       _searchError = null;
+      _cachedImport = null;
     });
+
+    if (result.type == MediaSearchType.show) {
+      _loadSeasons(result.tmdbId);
+    }
   }
 
-  void _submit() {
+  Future<void> _submit() async {
     final title = _titleController.text.trim();
     if (title.isEmpty) return;
 
     final seasonText = _seasonController.text.trim();
     final season = seasonText.isEmpty ? null : int.tryParse(seasonText);
 
+    // Sync to the shared backend catalog to pull real runtime/genre data.
+    // Best-effort: if it fails, the entry is still logged with estimates.
+    Map<String, dynamic>? imported;
+    final tmdbId = _tmdbId;
+    if (tmdbId != null) {
+      setState(() => _saving = true);
+      try {
+        imported = await _entertainmentApi.import(tmdbId, _type);
+      } catch (_) {
+        imported = null;
+      }
+      if (!mounted) return;
+      setState(() => _saving = false);
+    }
+
+    if (!mounted) return;
     Navigator.pop(context, {
       'title': title,
       'note': _noteController.text.trim(),
@@ -173,7 +233,40 @@ class _AddMediaSheetState extends State<AddMediaSheet> {
       'posterUrl': _posterUrl,
       'year': _year,
       'tmdbId': _tmdbId,
+      'genres': (imported?['genres'] as List<dynamic>?)?.cast<String>(),
+      'runtimeMinutes': imported?['runtime_minutes'] as int?,
+      'episodeRuntimeMinutes': imported?['episode_runtime_minutes'] as int?,
+      'numberOfEpisodes': imported?['number_of_episodes'] as int?,
+      'numberOfSeasons': imported?['number_of_seasons'] as int?,
     });
+  }
+
+  Future<void> _confirmDelete() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1A22),
+        title: const Text('Remove from log?', style: TextStyle(color: Colors.white)),
+        content: Text(
+          'This removes "${widget.entry?.title}" from your log. This can\'t be undone.',
+          style: TextStyle(color: Colors.grey.shade400),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Remove', style: TextStyle(color: Colors.redAccent)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      Navigator.pop(context, {'action': 'delete'});
+    }
   }
 
   @override
@@ -198,6 +291,13 @@ class _AddMediaSheetState extends State<AddMediaSheet> {
                   ),
                 ),
                 const Spacer(),
+                if (_isEditing)
+                  IconButton(
+                    onPressed: _confirmDelete,
+                    icon: const Icon(Icons.delete_outline),
+                    color: Colors.redAccent,
+                    tooltip: 'Remove from log',
+                  ),
                 IconButton(
                   onPressed: () => Navigator.pop(context),
                   icon: const Icon(Icons.close),
@@ -233,6 +333,9 @@ class _AddMediaSheetState extends State<AddMediaSheet> {
                     _year = null;
                     _tmdbId = null;
                     _results = [];
+                    _seasons = [];
+                    _selectedSeason = null;
+                    _cachedImport = null;
                   });
                   _runSearch(_titleController.text);
                 },
@@ -386,16 +489,59 @@ class _AddMediaSheetState extends State<AddMediaSheet> {
             ],
             if (_type == MediaType.show) ...[
               const SizedBox(height: 12),
-              TextField(
-                controller: _seasonController,
-                keyboardType: TextInputType.number,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                style: const TextStyle(color: Colors.white),
-                decoration: const InputDecoration(
-                  labelText: 'Season (optional)',
-                  prefixIcon: Icon(Icons.layers_outlined),
+              Text(
+                'Season',
+                style: theme.textTheme.labelLarge?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey.shade300,
                 ),
               ),
+              const SizedBox(height: 8),
+              if (_tmdbId == null)
+                TextField(
+                  controller: _seasonController,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(
+                    labelText: 'Season',
+                    prefixIcon: Icon(Icons.layers_outlined),
+                  ),
+                )
+              else if (_loadingSeasons)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 12),
+                  child: SizedBox(
+                    height: 20,
+                    width: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                )
+              else if (_seasons.isEmpty)
+                Text(
+                  'Season data unavailable for this title.',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: Colors.grey.shade500,
+                  ),
+                )
+              else
+                DropdownButtonFormField<int>(
+                  initialValue: _selectedSeason,
+                  dropdownColor: const Color(0xFF1A1A22),
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(
+                    prefixIcon: Icon(Icons.layers_outlined),
+                  ),
+                  items: _seasons.map((s) {
+                    final seasonNumber = s['season_number'] as int;
+                    final episodeCount = s['episode_count'] as int;
+                    return DropdownMenuItem(
+                      value: seasonNumber,
+                      child: Text('Season $seasonNumber • $episodeCount episodes'),
+                    );
+                  }).toList(),
+                  onChanged: (value) => setState(() => _selectedSeason = value),
+                ),
             ],
             const SizedBox(height: 16),
             Text(
@@ -470,14 +616,20 @@ class _AddMediaSheetState extends State<AddMediaSheet> {
             ),
             const SizedBox(height: 20),
             FilledButton(
-              onPressed: _submit,
+              onPressed: _saving ? null : _submit,
               style: FilledButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14),
                 ),
               ),
-              child: Text(_isEditing ? 'Save Changes' : 'Add to Log'),
+              child: _saving
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Text(_isEditing ? 'Save Changes' : 'Add to Log'),
             ),
           ],
         ),

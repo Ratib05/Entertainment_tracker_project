@@ -13,7 +13,7 @@ class ReelLogApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Entertainment tracker',
+      title: 'MediaMine',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
       home: const LoginScreen(),

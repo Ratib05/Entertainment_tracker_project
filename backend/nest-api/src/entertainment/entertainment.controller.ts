@@ -46,13 +46,32 @@ export class EntertainmentController {
     return this.tmdbService.getGenreNames(genreListTmdbDto.type ?? MediaType.Film);
   }
 
+  @Get('watch-providers/tmdb')
+  async watchProvidersTmdb(@Query() watchProvidersTmdbDto: WatchProvidersTmdbDto) {
+    return this.tmdbService.getWatchProviders(
+      watchProvidersTmdbDto.tmdbId,
+      watchProvidersTmdbDto.type,
+      watchProvidersTmdbDto.region ?? 'US',
+    );
+  }
+
   @Post('import/tmdb')
   async importTmdb(@Body() importTmdbDto: ImportTmdbDto) {
     const existing = await this.entertainmentService.findByExternalId(
       importTmdbDto.tmdbId,
       importTmdbDto.type,
     );
-    if (existing) {
+
+    // Older rows (imported before a field like `seasons` or `runtime_minutes`
+    // existed) are missing data the app now depends on — refresh from TMDB
+    // and backfill instead of returning the stale cached row forever.
+    const isStale =
+      existing &&
+      (importTmdbDto.type === MediaType.Show
+        ? !existing.seasons
+        : existing.runtime_minutes == null);
+
+    if (existing && !isStale) {
       return existing;
     }
 
@@ -60,6 +79,10 @@ export class EntertainmentController {
       importTmdbDto.type === MediaType.Film
         ? await this.tmdbService.getMovieDetails(importTmdbDto.tmdbId)
         : await this.tmdbService.getShowDetails(importTmdbDto.tmdbId);
+
+    if (existing) {
+      return this.entertainmentService.update(existing.id, details as UpdateEntertainmentDto);
+    }
 
     return this.entertainmentService.create(details as CreateEntertainmentDto);
   }

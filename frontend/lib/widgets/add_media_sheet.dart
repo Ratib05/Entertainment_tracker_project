@@ -64,6 +64,14 @@ class _AddMediaSheetState extends State<AddMediaSheet> {
     _seasonController = TextEditingController(
       text: entry?.season?.toString() ?? '',
     );
+<<<<<<< Updated upstream
+=======
+    _lastWatchedController = TextEditingController(
+      text: entry?.lastWatchedMinutes != null
+          ? _formatMinutesAsTimestamp(entry!.lastWatchedMinutes!)
+          : '',
+    );
+>>>>>>> Stashed changes
     _type = entry?.type ?? (_isGamesMode ? MediaType.game : MediaType.film);
     if (!_allowedTypes.contains(_type)) {
       _type = _allowedTypes.first;
@@ -203,8 +211,22 @@ class _AddMediaSheetState extends State<AddMediaSheet> {
     final title = _titleController.text.trim();
     if (title.isEmpty) return;
 
+<<<<<<< Updated upstream
     final seasonText = _seasonController.text.trim();
     final season = seasonText.isEmpty ? null : int.tryParse(seasonText);
+=======
+    final manualSeasonText = _seasonController.text.trim();
+    final manualSeason = manualSeasonText.isEmpty ? null : int.tryParse(manualSeasonText);
+
+    final usingSeasonDropdown = _type == MediaType.show && _tmdbId != null;
+    final season = usingSeasonDropdown ? _selectedSeason : manualSeason;
+
+    final lastWatchedText = _lastWatchedController.text.trim();
+    final lastWatchedMinutes =
+        _status == WatchStatus.watching && lastWatchedText.isNotEmpty
+            ? _parseTimestampToMinutes(lastWatchedText)
+            : null;
+>>>>>>> Stashed changes
 
     // Sync to the shared backend catalog to pull real runtime/genre data.
     // Best-effort: if it fails, the entry is still logged with estimates.

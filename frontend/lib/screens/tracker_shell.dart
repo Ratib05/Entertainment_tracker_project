@@ -7,10 +7,12 @@ import '../widgets/add_media_sheet.dart';
 import 'discover_screen.dart';
 import 'games_screen.dart';
 import 'movies_screen.dart';
+import 'settings_screen.dart';
 
 /// TrackerShell is the main container that manages the app's state and navigation.
-/// It handles switching between Movies and Games screens, showing/hiding the add/edit sheets,
-/// and managing CRUD operations on media entries.
+/// Bottom nav tabs: Movies, Games, Discover, Settings. Movies/Games keep their
+/// existing screens and logic unchanged; Discover and Settings are now tabs
+/// instead of a FAB-menu destination.
 class TrackerShell extends StatefulWidget {
   const TrackerShell({super.key});
 
@@ -23,10 +25,9 @@ class _TrackerShellState extends State<TrackerShell> {
   /// Repository for storing and retrieving media entries.
   /// Uses in-memory storage (data doesn't persist between app restarts).
   final MemoryLibraryRepository _repository = MemoryLibraryRepository();
-  
-  /// Current mode: either showing movies or games.
-  /// Determines which screen is displayed.
-  TrackerMode _mode = TrackerMode.movies;
+
+  /// Index of the currently selected bottom nav tab.
+  int _selectedIndex = 0;
 
   // ========== FILTERED ENTRY LISTS ==========
   /// Get all movies and shows (excludes games).
@@ -42,88 +43,10 @@ class _TrackerShellState extends State<TrackerShell> {
       _repository.getAll().where((e) => e.type == MediaType.game).toList();
 
   // ========== SHEET MANAGEMENT ==========
-  /// Handles the FAB tap. In movies mode, shows a small popup near the FAB
-  /// with a choice between browsing Discover and adding a title directly;
-  /// games mode has no Discover yet, so it opens the add sheet straight away.
-  Future<void> _handleFabPressed() async {
-    if (_mode == TrackerMode.games) {
-      await _showAddSheet();
-      return;
-    }
-
-    final overlayBox = Overlay.of(context).context.findRenderObject() as RenderBox;
-    final size = overlayBox.size;
-    final accent = Theme.of(context).colorScheme.primary;
-
-    // Anchored right at the FAB's position (just above the 88dp bottom bar)
-    // with almost no room reserved below, so the menu is forced to grow
-    // upward from the button instead of dropping down over it.
-    const menuWidth = 150.0;
-    const itemHeight = 64.0;
-
-    final choice = await showMenu<_FabChoice>(
-      context: context,
-      color: const Color(0xFF1A1A22),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      position: RelativeRect.fromLTRB(
-        size.width - menuWidth - 20,
-        size.height - 160,
-        20,
-        104,
-      ),
-      items: [
-        PopupMenuItem(
-          value: _FabChoice.discover,
-          height: itemHeight,
-          child: SizedBox(
-            width: menuWidth,
-            child: Row(
-              children: [
-                Icon(Icons.explore_outlined, color: accent, size: 20),
-                const SizedBox(width: 12),
-                const Text('Discover', style: TextStyle(color: Colors.white)),
-              ],
-            ),
-          ),
-        ),
-        PopupMenuItem(
-          value: _FabChoice.addTitle,
-          height: itemHeight,
-          child: SizedBox(
-            width: menuWidth,
-            child: Row(
-              children: [
-                Icon(Icons.add_circle_outline, color: accent, size: 20),
-                const SizedBox(width: 12),
-                const Text('Add a title', style: TextStyle(color: Colors.white)),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-
-    if (choice == null || !mounted) return;
-
-    switch (choice) {
-      case _FabChoice.discover:
-        await Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => DiscoverScreen(
-              libraryEntries: _repository.getAll(),
-              onAdd: _insertEntry,
-            ),
-          ),
-        );
-      case _FabChoice.addTitle:
-        await _showAddSheet();
-    }
-  }
-
   /// Opens the add sheet in modal bottom sheet.
   /// Returns the result from AddMediaSheet (map of form data).
   /// Creates a new entry if data is returned.
-  Future<void> _showAddSheet() async {
+  Future<void> _showAddSheet(TrackerMode mode) async {
     final result = await showModalBottomSheet<Map<String, dynamic>>(
       context: context,
       // Allow scrolling if keyboard pops up
@@ -131,12 +54,12 @@ class _TrackerShellState extends State<TrackerShell> {
       // Show drag handle at top of sheet
       showDragHandle: true,
       backgroundColor: const Color(0xFF1A1A22),
-      builder: (_) => AddMediaSheet(mode: _mode),
+      builder: (_) => AddMediaSheet(mode: mode),
     );
 
     // Exit if sheet was dismissed or not mounted anymore
     if (result == null || !mounted) return;
-    
+
     // Insert the new entry
     _insertEntry(result);
   }
@@ -144,13 +67,13 @@ class _TrackerShellState extends State<TrackerShell> {
   /// Opens the edit sheet in modal bottom sheet for an existing entry.
   /// Pre-populates the form with existing data.
   /// Updates the entry if data is returned.
-  Future<void> _showEditSheet(MediaEntry entry) async {
+  Future<void> _showEditSheet(TrackerMode mode, MediaEntry entry) async {
     final result = await showModalBottomSheet<Map<String, dynamic>>(
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
       backgroundColor: const Color(0xFF1A1A22),
-      builder: (_) => AddMediaSheet(mode: _mode, entry: entry),
+      builder: (_) => AddMediaSheet(mode: mode, entry: entry),
     );
 
     // Exit if sheet was dismissed or not mounted anymore
@@ -229,7 +152,7 @@ class _TrackerShellState extends State<TrackerShell> {
   /// Called when user swipes to delete a tile.
   void _deleteEntry(String id) {
     setState(() => _repository.delete(id));
-    
+
     // Show confirmation that entry was removed
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -242,103 +165,59 @@ class _TrackerShellState extends State<TrackerShell> {
     );
   }
 
-  // ========== NAVIGATION ==========
-  /// Toggles between movies and games mode.
-  /// Called when user taps the mode toggle button.
-  void _toggleMode() {
-    setState(() {
-      _mode = _mode == TrackerMode.movies
-          ? TrackerMode.games
-          : TrackerMode.movies;
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isGameMode = _mode == TrackerMode.games;
-
     return Scaffold(
-      // ========== BODY: CONDITIONAL SCREEN DISPLAY ==========
-      // Show different screen based on current mode
-      body: isGameMode
-          ? GamesScreen(
-              entries: _gamesEntries,
-              onAdd: _handleFabPressed,
-              onEdit: _showEditSheet,
-              onDelete: _deleteEntry,
-            )
-          : MoviesScreen(
-              entries: _moviesEntries,
-              onAdd: _handleFabPressed,
-              onEdit: _showEditSheet,
-              onDelete: _deleteEntry,
-            ),
-      
-      // ========== BOTTOM APP BAR ==========
-      // Provides mode toggle button and mode description
-      bottomNavigationBar: BottomAppBar(
-        // Different background color based on mode (light for games, dark for movies)
-        color: isGameMode ? const Color(0xFFF4EEE5) : Colors.black,
-        elevation: 0,
-        height: 88,
-        padding: EdgeInsets.zero,
-        // Allow bottom button to extend into FAB space
-        clipBehavior: Clip.none,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              // ========== MODE TOGGLE BUTTON ==========
-              // Tap to switch between movies and games
-              GestureDetector(
-                onTap: _toggleMode,
-                child: Container(
-                  width: 56,
-                  height: 56,
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    // Different colors for each mode
-                    color: isGameMode
-                        ? Colors.blue.shade600 // Show "Switch to movies" button in blue
-                        : Colors.green.shade600, // Show "Switch to games" button in green
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  alignment: Alignment.center,
-                  child: Icon(
-                    // Icon indicates the OTHER mode (what you'll switch to)
-                    isGameMode ? Icons.local_movies : Icons.sports_esports,
-                    color: Colors.white,
-                    size: 26,
-                  ),
-                ),
-              ),
-              
-              const SizedBox(width: 16),
-              
-              // ========== MODE DESCRIPTION TEXT ==========
-              // Explain what the button does
-              Expanded(
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    isGameMode
-                        ? 'Switch to movie tracker'
-                        : 'Tap to show games in your tracker.',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color:
-                          isGameMode ? Colors.black87 : Colors.grey.shade500,
-                    ),
-                  ),
-                ),
-              ),
-            ],
+      body: IndexedStack(
+        index: _selectedIndex,
+        children: [
+          MoviesScreen(
+            entries: _moviesEntries,
+            onAdd: () => _showAddSheet(TrackerMode.movies),
+            onEdit: (entry) => _showEditSheet(TrackerMode.movies, entry),
+            onDelete: _deleteEntry,
           ),
-        ),
+          GamesScreen(
+            entries: _gamesEntries,
+            onAdd: () => _showAddSheet(TrackerMode.games),
+            onEdit: (entry) => _showEditSheet(TrackerMode.games, entry),
+            onDelete: _deleteEntry,
+          ),
+          DiscoverScreen(
+            libraryEntries: _repository.getAll(),
+            onAdd: _insertEntry,
+          ),
+          const SettingsScreen(),
+        ],
+      ),
+      bottomNavigationBar: NavigationBar(
+        backgroundColor: const Color(0xFF0F0F12),
+        indicatorColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
+        selectedIndex: _selectedIndex,
+        onDestinationSelected: (index) => setState(() => _selectedIndex = index),
+        destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.local_movies_outlined),
+            selectedIcon: Icon(Icons.local_movies),
+            label: 'Movies',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.sports_esports_outlined),
+            selectedIcon: Icon(Icons.sports_esports),
+            label: 'Games',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.explore_outlined),
+            selectedIcon: Icon(Icons.explore),
+            label: 'Discover',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.settings_outlined),
+            selectedIcon: Icon(Icons.settings),
+            label: 'Settings',
+          ),
+        ],
       ),
     );
   }
 }
-
-enum _FabChoice { discover, addTitle }

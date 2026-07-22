@@ -7,6 +7,7 @@ import { SearchTmdbDto } from './dto/search-tmdb.dto';
 import { ImportTmdbDto } from './dto/import-tmdb.dto';
 import { DiscoverTmdbDto } from './dto/discover-tmdb.dto';
 import { GenreListTmdbDto } from './dto/genre-list-tmdb.dto';
+import { WatchProvidersTmdbDto } from './dto/watch-providers-tmdb.dto';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { MediaType } from '../common/enums/media-type.enum';
 

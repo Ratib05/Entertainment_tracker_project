@@ -43,6 +43,18 @@ interface TmdbGenreListResponse {
   genres: Array<{ id: number; name: string }>;
 }
 
+interface TmdbWatchProvidersResponse {
+  results: Record<
+    string,
+    {
+      link: string;
+      flatrate?: Array<{ provider_name: string; logo_path: string }>;
+      rent?: Array<{ provider_name: string; logo_path: string }>;
+      buy?: Array<{ provider_name: string; logo_path: string }>;
+    }
+  >;
+}
+
 @Injectable()
 export class TmdbService {
   private readonly baseUrl = 'https://api.themoviedb.org/3';

@@ -26,13 +26,17 @@ class _AddMediaSheetState extends State<AddMediaSheet> {
   late final TextEditingController _titleController;
   late final TextEditingController _noteController;
   late final TextEditingController _seasonController;
-  late final TextEditingController _lastWatchedController;
   late MediaType _type;
   late WatchStatus _status;
   int? _rating;
   String? _posterUrl;
   int? _year;
   int? _tmdbId;
+
+  // How far into the film/season the user has watched, picked individually.
+  int _watchedHours = 0;
+  int _watchedMinutes = 0;
+  int _watchedSeconds = 0;
 
   final EntertainmentApiService _entertainmentApi = EntertainmentApiService();
   Timer? _debounce;
@@ -70,11 +74,10 @@ class _AddMediaSheetState extends State<AddMediaSheet> {
     _seasonController = TextEditingController(
       text: entry?.season?.toString() ?? '',
     );
-    _lastWatchedController = TextEditingController(
-      text: entry?.lastWatchedMinutes != null
-          ? _formatMinutesAsTimestamp(entry!.lastWatchedMinutes!)
-          : '',
-    );
+    if (entry?.lastWatchedMinutes != null) {
+      _watchedHours = entry!.lastWatchedMinutes! ~/ 60;
+      _watchedMinutes = entry.lastWatchedMinutes! % 60;
+    }
     _type = entry?.type ?? (_isGamesMode ? MediaType.game : MediaType.film);
     if (!_allowedTypes.contains(_type)) {
       _type = _allowedTypes.first;
@@ -152,7 +155,6 @@ class _AddMediaSheetState extends State<AddMediaSheet> {
     _titleController.dispose();
     _noteController.dispose();
     _seasonController.dispose();
-    _lastWatchedController.dispose();
     super.dispose();
   }
 
@@ -245,11 +247,10 @@ class _AddMediaSheetState extends State<AddMediaSheet> {
     final usingSeasonDropdown = _type == MediaType.show && _tmdbId != null;
     final season = usingSeasonDropdown ? _selectedSeason : manualSeason;
 
-    final lastWatchedText = _lastWatchedController.text.trim();
-    final lastWatchedMinutes =
-        _status == WatchStatus.watching && lastWatchedText.isNotEmpty
-            ? _parseTimestampToMinutes(lastWatchedText)
-            : null;
+    final lastWatchedMinutes = _status == WatchStatus.watching
+        ? ((_watchedHours * 3600 + _watchedMinutes * 60 + _watchedSeconds) / 60)
+            .round()
+        : null;
 
     // Sync to the shared backend catalog to pull real runtime/genre data.
     // Reuse the season-fetch's import response when we already have it
@@ -295,37 +296,6 @@ class _AddMediaSheetState extends State<AddMediaSheet> {
       'seasonEpisodeCount': seasonEpisodeCount,
       'lastWatchedMinutes': lastWatchedMinutes,
     });
-  }
-
-  /// Parses a timestamp like "1:23:45" (h:mm:ss), "23:45" (m:ss), or a bare
-  /// number of minutes, returning the total rounded to the nearest minute.
-  int? _parseTimestampToMinutes(String text) {
-    final parts = text.split(':').map((p) => int.tryParse(p.trim())).toList();
-    if (parts.any((p) => p == null)) return null;
-    final values = parts.cast<int>();
-
-    switch (values.length) {
-      case 1:
-        return values[0];
-      case 2:
-        final totalSeconds = values[0] * 60 + values[1];
-        return (totalSeconds / 60).round();
-      case 3:
-        final totalSeconds = values[0] * 3600 + values[1] * 60 + values[2];
-        return (totalSeconds / 60).round();
-      default:
-        return null;
-    }
-  }
-
-  /// Formats stored minutes back as an "h:mm:ss" timestamp for editing.
-  String _formatMinutesAsTimestamp(int minutes) {
-    final hours = minutes ~/ 60;
-    final mins = minutes % 60;
-    if (hours > 0) {
-      return '$hours:${mins.toString().padLeft(2, '0')}:00';
-    }
-    return '$mins:00';
   }
 
   Future<void> _confirmDelete() async {
@@ -655,16 +625,43 @@ class _AddMediaSheetState extends State<AddMediaSheet> {
             ),
             if (_status == WatchStatus.watching && !_isGamesMode) ...[
               const SizedBox(height: 12),
-              TextField(
-                controller: _lastWatchedController,
-                keyboardType: TextInputType.datetime,
-                inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9:]'))],
-                style: const TextStyle(color: Colors.white),
-                decoration: const InputDecoration(
-                  labelText: 'Timestamp',
-                  hintText: 'e.g. 1:23:45',
-                  prefixIcon: Icon(Icons.schedule_outlined),
+              Text(
+                'Timestamp',
+                style: theme.textTheme.labelLarge?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey.shade300,
                 ),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: _TimeUnitDropdown(
+                      label: 'hr',
+                      value: _watchedHours,
+                      max: 23,
+                      onChanged: (value) => setState(() => _watchedHours = value),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _TimeUnitDropdown(
+                      label: 'min',
+                      value: _watchedMinutes,
+                      max: 59,
+                      onChanged: (value) => setState(() => _watchedMinutes = value),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _TimeUnitDropdown(
+                      label: 'sec',
+                      value: _watchedSeconds,
+                      max: 59,
+                      onChanged: (value) => setState(() => _watchedSeconds = value),
+                    ),
+                  ),
+                ],
               ),
             ],
             if (!_isGamesMode) ...[
@@ -811,6 +808,43 @@ class _AddMediaSheetState extends State<AddMediaSheet> {
         buildGroup('Rent', providers.rent),
         buildGroup('Buy', providers.buy),
       ],
+    );
+  }
+}
+
+/// A labeled dropdown for picking a single time unit (hours, minutes, or
+/// seconds) from 0 up to [max], inclusive.
+class _TimeUnitDropdown extends StatelessWidget {
+  const _TimeUnitDropdown({
+    required this.label,
+    required this.value,
+    required this.max,
+    required this.onChanged,
+  });
+
+  final String label;
+  final int value;
+  final int max;
+  final ValueChanged<int> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return DropdownButtonFormField<int>(
+      initialValue: value,
+      dropdownColor: const Color(0xFF1A1A22),
+      style: const TextStyle(color: Colors.white),
+      decoration: InputDecoration(labelText: label),
+      menuMaxHeight: 300,
+      items: List.generate(
+        max + 1,
+        (i) => DropdownMenuItem(
+          value: i,
+          child: Text(i.toString().padLeft(2, '0')),
+        ),
+      ),
+      onChanged: (newValue) {
+        if (newValue != null) onChanged(newValue);
+      },
     );
   }
 }

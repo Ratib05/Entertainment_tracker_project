@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'tracker_shell.dart';
 
@@ -13,13 +14,16 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _usernameController = TextEditingController();
   bool _obscurePassword = true;
   bool _isLoading = false;
+  bool _showSignUp = false;
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
+    _usernameController.dispose();
     super.dispose();
   }
 
@@ -28,15 +32,85 @@ class _LoginScreenState extends State<LoginScreen> {
 
     setState(() => _isLoading = true);
 
-    // Placeholder until NestJS auth is wired up.
-    await Future<void>.delayed(const Duration(milliseconds: 600));
+    try {
+      await Supabase.instance.client.auth.signInWithPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+      );
 
-    if (!mounted) return;
+      if (!mounted) return;
 
-    setState(() => _isLoading = false);
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const TrackerShell()),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Login failed: $e')),
+      );
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
 
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => const TrackerShell()),
+  Future<void> _signup() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() => _isLoading = true);
+
+    try {
+      await Supabase.instance.client.auth.signUp(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+        data: {'username': _usernameController.text.trim()},
+      );
+
+      if (!mounted) return;
+
+      setState(() => _showSignUp = false);
+      _emailController.clear();
+      _passwordController.clear();
+      _usernameController.clear();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Account created! Please log in.'),
+          duration: Duration(seconds: 3),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Sign up failed: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Widget _buildPasswordRequirement(String label, bool isMet) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Icon(
+            isMet ? Icons.check_circle : Icons.radio_button_unchecked,
+            size: 18,
+            color: isMet ? Colors.green : Colors.grey,
+          ),
+          const SizedBox(width: 8),
+          Text(
+            label,
+            style: TextStyle(
+              color: isMet ? Colors.green : Colors.grey,
+              fontSize: 12,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -72,13 +146,36 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Log in to track your films, shows, and games.',
+                      _showSignUp
+                          ? 'Create your account'
+                          : 'Log in to track your films, shows, and games.',
                       textAlign: TextAlign.center,
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: Colors.grey.shade500,
                       ),
                     ),
                     const SizedBox(height: 40),
+                    if (_showSignUp) ...[
+                      TextFormField(
+                        controller: _usernameController,
+                        keyboardType: TextInputType.text,
+                        textInputAction: TextInputAction.next,
+                        autocorrect: false,
+                        style: const TextStyle(color: Colors.white),
+                        decoration: const InputDecoration(
+                          labelText: 'Username',
+                          prefixIcon: Icon(Icons.person_outline),
+                        ),
+                        validator: (value) {
+                          if ((value ?? '').isEmpty) return 'Enter a username';
+                          if ((value ?? '').length < 3) {
+                            return 'Username must be at least 3 characters';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                    ],
                     TextFormField(
                       controller: _emailController,
                       keyboardType: TextInputType.emailAddress,
@@ -102,6 +199,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       obscureText: _obscurePassword,
                       textInputAction: TextInputAction.done,
                       style: const TextStyle(color: Colors.white),
+                      onChanged: _showSignUp ? (_) => setState(() {}) : null,
                       decoration: InputDecoration(
                         labelText: 'Password',
                         prefixIcon: const Icon(Icons.lock_outline),
@@ -117,17 +215,69 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
                       validator: (value) {
-                        if ((value ?? '').isEmpty) return 'Enter your password';
-                        if ((value ?? '').length < 6) {
-                          return 'Password must be at least 6 characters';
+                        final password = value ?? '';
+                        if (password.isEmpty) return 'Enter your password';
+                        if (!_showSignUp) return null;
+                        if (password.length < 8) {
+                          return 'Password must be at least 8 characters';
+                        }
+                        if (!password.contains(RegExp(r'[A-Z]'))) {
+                          return 'Password needs an uppercase letter';
+                        }
+                        if (!password.contains(RegExp(r'[0-9]'))) {
+                          return 'Password needs a number';
+                        }
+                        if (!password.contains(
+                          RegExp(r'[!@#$%^&*()_+\-=\[\]{};:,./<>?]'),
+                        )) {
+                          return 'Password needs a special character';
                         }
                         return null;
                       },
-                      onFieldSubmitted: (_) => _login(),
+                      onFieldSubmitted: (_) =>
+                          _showSignUp ? _signup() : _login(),
                     ),
+                    if (_showSignUp) ...[
+                      const SizedBox(height: 8),
+                      Card(
+                        color: const Color(0xFF1A1A22),
+                        child: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildPasswordRequirement(
+                                'At least 8 characters',
+                                _passwordController.text.length >= 8,
+                              ),
+                              _buildPasswordRequirement(
+                                'At least 1 uppercase letter',
+                                _passwordController.text.contains(
+                                  RegExp(r'[A-Z]'),
+                                ),
+                              ),
+                              _buildPasswordRequirement(
+                                'At least 1 number',
+                                _passwordController.text.contains(
+                                  RegExp(r'[0-9]'),
+                                ),
+                              ),
+                              _buildPasswordRequirement(
+                                'At least 1 special character (!@#\$%)',
+                                _passwordController.text.contains(
+                                  RegExp(r'[!@#$%^&*()_+\-=\[\]{};:,./<>?]'),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 28),
                     FilledButton(
-                      onPressed: _isLoading ? null : _login,
+                      onPressed: _isLoading
+                          ? null
+                          : (_showSignUp ? _signup : _login),
                       style: FilledButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(
@@ -143,18 +293,19 @@ class _LoginScreenState extends State<LoginScreen> {
                                 color: Colors.white,
                               ),
                             )
-                          : const Text('Log in'),
+                          : Text(_showSignUp ? 'Sign Up' : 'Log in'),
                     ),
                     const SizedBox(height: 16),
                     TextButton(
                       onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Sign up will connect to the API later.'),
-                          ),
-                        );
+                        setState(() => _showSignUp = !_showSignUp);
+                        _formKey.currentState?.reset();
                       },
-                      child: const Text('Create an account'),
+                      child: Text(
+                        _showSignUp
+                            ? 'Already have an account? Log in'
+                            : 'Create an account',
+                      ),
                     ),
                   ],
                 ),

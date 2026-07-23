@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'login_screen.dart';
 
-/// SettingsScreen holds account and app-level settings. Account details are
-/// placeholders until real sign-in (Supabase auth) is wired up — login is
-/// currently mocked, so there's no real user session to reflect here yet.
+/// SettingsScreen holds account and app-level settings.
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
 
   Future<void> _logOut(BuildContext context) async {
+    await Supabase.instance.client.auth.signOut();
+    if (!context.mounted) return;
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(builder: (_) => const LoginScreen()),
       (route) => false,
@@ -18,6 +19,8 @@ class SettingsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final user = Supabase.instance.client.auth.currentUser;
+    final username = user?.userMetadata?['username'] as String?;
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -52,11 +55,24 @@ class SettingsScreen extends StatelessWidget {
                       ),
                       const SizedBox(width: 12),
                       Expanded(
-                        child: Text(
-                          'Account details will appear here once sign-in is connected.',
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: Colors.grey.shade500,
-                          ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (username != null && username.isNotEmpty)
+                              Text(
+                                username,
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            Text(
+                              user?.email ?? 'Not signed in',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: Colors.grey.shade500,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],

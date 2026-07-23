@@ -83,7 +83,7 @@ class MoviesScreen extends StatelessWidget {
           Expanded(
             child: entries.isEmpty
                 // Show empty state if no entries
-                ? _MoviesEmptyState(onAdd: onAdd)
+                ? const _MoviesEmptyState()
                 // Show list of entries
                 : ListView.builder(
                     padding: const EdgeInsets.fromLTRB(20, 0, 20, 100),
@@ -229,11 +229,8 @@ class _StatItem extends StatelessWidget {
 }
 
 /// _MoviesEmptyState displays when there are no entries in the library.
-/// Provides helpful message and button to add first entry.
 class _MoviesEmptyState extends StatelessWidget {
-  const _MoviesEmptyState({required this.onAdd});
-
-  final VoidCallback onAdd;
+  const _MoviesEmptyState();
 
   @override
   Widget build(BuildContext context) {
@@ -280,15 +277,6 @@ class _MoviesEmptyState extends StatelessWidget {
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: Colors.grey.shade500,
               ),
-            ),
-            
-            const SizedBox(height: 24),
-            
-            // ========== CTA BUTTON ==========
-            // Button to add the first entry
-            FilledButton.tonal(
-              onPressed: onAdd,
-              child: const Text('Log your first title'),
             ),
           ],
         ),

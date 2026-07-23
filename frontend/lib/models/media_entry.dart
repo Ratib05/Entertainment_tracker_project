@@ -43,6 +43,7 @@ class MediaEntry {
     this.numberOfEpisodes,
     this.numberOfSeasons,
     this.lastWatchedMinutes,
+    this.seasonEpisodeCount,
   });
 
   /// Unique identifier for this entry
@@ -79,6 +80,9 @@ class MediaEntry {
   /// How many minutes into the film/season the user has watched so far.
   /// Only meaningful while status is [WatchStatus.watching].
   final int? lastWatchedMinutes;
+  /// Real episode count for the specific season selected, from TMDB (show
+  /// only). Used instead of the averaged episodes-per-season estimate.
+  final int? seasonEpisodeCount;
 
   /// copyWith creates a modified copy of this entry.
   /// This is useful for updating specific fields without recreating the entire object.
@@ -100,6 +104,7 @@ class MediaEntry {
     int? numberOfEpisodes,
     int? numberOfSeasons,
     int? lastWatchedMinutes,
+    int? seasonEpisodeCount,
     bool clearRating = false,
     bool clearSeason = false,
     bool clearWatchedDate = false,
@@ -130,6 +135,7 @@ class MediaEntry {
       lastWatchedMinutes: clearLastWatchedMinutes
           ? null
           : (lastWatchedMinutes ?? this.lastWatchedMinutes),
+      seasonEpisodeCount: seasonEpisodeCount ?? this.seasonEpisodeCount,
     );
   }
 }
@@ -191,22 +197,27 @@ String formatShortDate(DateTime date) {
   return '${months[date.month - 1]} ${date.day}, ${date.year}';
 }
 
-/// Screen time in minutes for films/shows. Uses real TMDB runtime data when
-/// available (set on import); falls back to rough estimates for titles
-/// added manually without a TMDB match.
+/// Screen time in minutes for films/shows, driven by watch status:
+/// - watchlist: not started yet, so 0.
+/// - watching: however far the user says they've gotten ([lastWatchedMinutes]).
+/// - watched: the full runtime.
+/// Uses real TMDB runtime/episode-count data when available (set on
+/// import); falls back to rough estimates for titles added manually
+/// without a TMDB match.
 extension MediaEntryScreenTimeX on MediaEntry {
   static const int fallbackFilmMinutes = 120;
   static const int fallbackShowEpisodesPerSeason = 10;
   static const int fallbackShowEpisodeMinutes = 45;
 
-  int get approxScreenMinutes {
+  int get _fullRuntimeMinutes {
     switch (type) {
       case MediaType.film:
         return runtimeMinutes ?? fallbackFilmMinutes;
       case MediaType.show:
-        final seasonsWatched = season ?? 1;
         final episodeMinutes = episodeRuntimeMinutes ?? fallbackShowEpisodeMinutes;
 
+        // Prefer the real episode count for the specific season logged;
+        // fall back to an averaged estimate if that's not available.
         final totalEpisodes = numberOfEpisodes;
         final totalSeasons = numberOfSeasons;
         final episodesPerSeason = (totalEpisodes != null &&
@@ -215,9 +226,23 @@ extension MediaEntryScreenTimeX on MediaEntry {
             ? (totalEpisodes / totalSeasons).round()
             : fallbackShowEpisodesPerSeason;
 
-        return seasonsWatched * episodesPerSeason * episodeMinutes;
+        final episodes = seasonEpisodeCount ?? ((season ?? 1) * episodesPerSeason);
+        return episodes * episodeMinutes;
       case MediaType.game:
         return 0;
+    }
+  }
+
+  int get approxScreenMinutes {
+    if (type == MediaType.game) return 0;
+
+    switch (status) {
+      case WatchStatus.watchlist:
+        return 0;
+      case WatchStatus.watching:
+        return (lastWatchedMinutes ?? 0).clamp(0, _fullRuntimeMinutes);
+      case WatchStatus.watched:
+        return _fullRuntimeMinutes;
     }
   }
 }
